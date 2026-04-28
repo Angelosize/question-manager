@@ -1,31 +1,69 @@
+from datetime import datetime
+from typing import Dict, List, Optional, Any
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from collections import defaultdict
 
-class SubjectStats(BaseModel):
+class AnalyticsTimeRange(BaseModel):
+    start_date: str
+    end_date: str
+
+class SubjectDistribution(BaseModel):
     subject: str
     count: int
+    percentage: float
 
-class TypeStats(BaseModel):
-    type: str
+class QuestionTypeDistribution(BaseModel):
+    question_type: str
     count: int
+    error_rate: float
 
-class DifficultyStats(BaseModel):
-    difficulty: str
+class TrendDataPoint(BaseModel):
+    date: str
     count: int
+    subjects: Dict[str, int]
 
-class TrendStats(BaseModel):
-    month: str
-    count: int
-
-class WrongMasteredStats(BaseModel):
-    mastered: int
-    not_mastered: int
-
-class OverviewStats(BaseModel):
-    total_questions: int
-    reviewed_count: int
-    not_reviewed_count: int
+class WeaknessTopic(BaseModel):
+    topic: str
     wrong_count: int
-    recent_week_added: int
-    subject_distribution: Dict[str, int]
-    review_percentage: float
+    total_questions: int
+    error_rate: float
+    improvement_suggestions: List[str]
+
+class CommonMistake(BaseModel):
+    pattern: str
+    frequency: int
+    example_questions: List[str]
+
+class WrongQuestionAnalytics(BaseModel):
+    # 基础统计
+    total_wrong_questions: int
+    unique_wrong_questions: int
+    average_wrong_per_question: float
+    
+    # 分布统计
+    by_subject: List[SubjectDistribution]
+    by_question_type: List[QuestionTypeDistribution]
+    by_difficulty: Dict[str, float]
+    
+    # 时间趋势
+    trend_last_30_days: List[TrendDataPoint]
+    
+    # 深度分析
+    weakest_topics: List[WeaknessTopic]
+    common_mistakes: List[CommonMistake]
+    
+    # 元数据
+    generated_at: datetime
+    time_range: AnalyticsTimeRange
+
+class ImprovementSuggestion(BaseModel):
+    topic: str
+    current_level: str  # e.g., "weak", "average", "strong"
+    suggested_actions: List[str]
+    recommended_resources: List[str]
+
+class AnalyticsResponse(BaseModel):
+    success: bool
+    data: Optional[WrongQuestionAnalytics] = None
+    error: Optional[str] = None
+    processing_time: float

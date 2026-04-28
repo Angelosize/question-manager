@@ -19,6 +19,7 @@ from app.api import categories
 # 添加导入
 from app.api import auth
 
+
 # 在现有路由注册后添加
 
 # 在其他路由注册之后添加
@@ -152,7 +153,8 @@ async def startup_event():
         print(f"  模型: {ai_assistant.client.model}")
     else:
         print("⚠️  AI批改服务: 不可用 (Ollama服务未启动)")
-    
+    await data_manager.load_data()
+    print("数据加载完成")
     print("✅ 应用启动完成")
 
 @app.on_event("shutdown")

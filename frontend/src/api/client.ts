@@ -9,10 +9,10 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 10000,
+      timeout: 30000,
     });
   }
-
+  
   async getQuestions(params?: FilterParams): Promise<QuestionListResponse> {
     try {
       const response = await this.client.get('/api/questions/', { params });

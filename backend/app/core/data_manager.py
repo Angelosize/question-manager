@@ -15,16 +15,15 @@ class DataManager:
         self.questions: List[Dict[str, Any]] = []
         self.categories: Dict[str, List[str]] = {}
         self.wrong_questions: List[Dict[str, Any]] = []
-        self.load_data()
     
-    def load_data(self) -> None:
-        """加载所有数据"""
-        self._load_questions()
-        self._load_categories()
-        self._load_wrong_questions()
+    async def load_data(self) -> None:
+        """异步加载所有数据"""
+        self.questions = await self._load_questions()
+        self.categories = self._load_categories()
+        self.wrong_questions = await self._load_wrong_questions()
     
-    def _load_questions(self) -> None:
-        """加载题目数据"""
+    async def _load_questions(self) -> List[Dict]:
+        """异步加载题目数据"""
         try:
             if QUESTION_DB_FILE.exists() and QUESTION_DB_FILE.stat().st_size > 0:
                 with open(QUESTION_DB_FILE, 'r', encoding='utf-8') as f:
@@ -45,14 +44,14 @@ class DataManager:
                         question.setdefault('last_wrong', '')
                         question.setdefault('tags', [])
                     
-                    self.questions = data
+                    return data
             else:
-                self.questions = []
                 self._create_empty_file(QUESTION_DB_FILE, [])
+                return []
         except Exception as e:
             print(f"加载题目数据出错: {e}")
-            self.questions = []
             self._create_empty_file(QUESTION_DB_FILE, [])
+            return []
     
     def _load_categories(self) -> None:
         """加载分类数据"""
@@ -69,20 +68,20 @@ class DataManager:
         
         self._ensure_default_categories()
     
-    def _load_wrong_questions(self) -> None:
-        """加载错题本数据"""
+    async def _load_wrong_questions(self) -> List[Dict]:
+        """异步加载错题数据"""
         try:
             if WRONG_QUESTIONS_FILE.exists() and WRONG_QUESTIONS_FILE.stat().st_size > 0:
                 with open(WRONG_QUESTIONS_FILE, 'r', encoding='utf-8') as f:
-                    self.wrong_questions = json.load(f)
+                    return json.load(f)
             else:
                 # 文件不存在或为空，创建空列表
-                self.wrong_questions = []
                 self._create_empty_file(WRONG_QUESTIONS_FILE, [])
+                return []
         except Exception as e:
             print(f"加载错题本数据出错: {e}")
-            self.wrong_questions = []
             self._create_empty_file(WRONG_QUESTIONS_FILE, [])
+            return []
     
     def _create_empty_file(self, file_path: Path, default_content: Any) -> None:
         """创建空文件"""
@@ -578,6 +577,21 @@ class DataManager:
         except Exception as e:
             print(f"导入Excel数据时出错: {e}")
             return 0
+    async def load_wrong_questions(self) -> List[Dict]:
+        """公共方法：加载错题数据"""
+        return await self._load_wrong_questions()
+    
+    async def load_questions(self) -> List[Dict]:
+        """公共方法：加载题目数据"""
+        return await self._load_questions()
+    
+    async def save_wrong_questions(self, data: List[Dict]):
+        """公共方法：保存错题数据"""
+        return await self._save_wrong_questions(data)
+    
+    async def save_questions(self, data: List[Dict]):
+        """公共方法：保存题目数据"""
+        return await self._save_questions(data)
 
 # 全局数据管理器实例
 data_manager = DataManager()
