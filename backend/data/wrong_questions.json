@@ -1,0 +1,59 @@
+[
+  {
+    "question_id": "QACB265BE",
+    "question_data": {
+      "id": "QACB265BE",
+      "subject": "语文",
+      "type": "填空题",
+      "content": "《资治通鉴》作者？",
+      "options": {},
+      "answer": "司马光",
+      "explanation": null,
+      "difficulty": "基础",
+      "knowledge_points": null,
+      "chapter": null,
+      "tags": [],
+      "source": null,
+      "note": null,
+      "created_time": "2026-04-25 08:00:47",
+      "updated_time": "2026-04-25 09:23:48",
+      "status": "active",
+      "review_count": 6,
+      "last_review": "2026-04-25 12:13:35",
+      "wrong_count": 5,
+      "last_wrong": "2026-04-25 12:19:34"
+    },
+    "user_answers": [
+      {
+        "answer": "司马迁",
+        "time": "2026-04-25 11:08:42"
+      },
+      {
+        "answer": "",
+        "time": "2026-04-25 11:08:49"
+      },
+      {
+        "answer": "司马迁",
+        "time": "2026-04-25 11:18:59"
+      },
+      {
+        "answer": "傻子",
+        "time": "2026-04-25 12:13:35"
+      },
+      {
+        "answer": "111455514\n",
+        "time": "2026-04-25 12:19:34"
+      },
+      {
+        "answer": "长江",
+        "time": "2026-04-25 12:46:46"
+      }
+    ],
+    "correct_answer": "司马光",
+    "wrong_count": 6,
+    "first_wrong": "2026-04-25 11:08:42",
+    "last_wrong": "2026-04-25 12:46:46",
+    "mastered": false,
+    "review_count": 0
+  }
+]

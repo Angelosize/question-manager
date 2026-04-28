@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  /* 导入上传区域样式 */
+.import-uploader .ant-upload-drag {
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  padding: 40px;
+  transition: border-color 0.3s;
+}
+
+.import-uploader .ant-upload-drag:hover {
+  border-color: #1890ff;
+}
+
+.import-uploader .ant-upload-drag p.ant-upload-text {
+  margin-bottom: 8px;
+  color: #262626;
+  font-size: 16px;
+}
+
+.import-uploader .ant-upload-drag p.ant-upload-hint {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+}
