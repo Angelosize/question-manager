@@ -1,3 +1,4 @@
+import { DrawingData } from './geometry';
 export interface Question {
   id: string;
   subject: string;
@@ -10,11 +11,14 @@ export interface Question {
   knowledge_points?: string;
   chapter?: string;
   tags?: string[];
-  source?: string;
+  source?: string;      // 原有题目来源（录入来源）
   note?: string;
   status?: string;
   created_at?: string;
   updated_at?: string;
+  exam?: ExamInfo | null;
+  drawing?: DrawingData | null;  // 新增
+  original_image?: string | null;
 }
 
 export interface QuestionCreate {
@@ -31,6 +35,14 @@ export interface QuestionCreate {
   source?: string;
   note?: string;
   status?: string;
+  // 新增考试归属字段（选填）
+  exam_name?: string;
+  year?: number;
+  number?: number;
+  score?: number;
+  exam_source?: string; 
+  drawing?: DrawingData | null;  // 试卷全称（避免与 source 混淆）
+  original_image?: string | null;   // ⭐ 新增
 }
 
 export interface QuestionUpdate {
@@ -47,6 +59,8 @@ export interface QuestionUpdate {
   source?: string;
   note?: string;
   status?: string;
+  drawing?: DrawingData | null;
+  original_image?: string | null;
 }
 
 export interface FilterParams {
@@ -105,12 +119,20 @@ export interface QuizQuestion extends Question {
   user_answer?: string;
   is_correct?: boolean;
   score?: number;
+  drawing?: DrawingData | null;
+  duration?: number; 
 }
 
 export interface QuizAnswer {
   question_id: string;
   user_answer: string;
-  ai_result?: AIGradeResponse;
+  full_score?: number;          // ⭐ 新增：该题满分
+  ai_result?: {
+    is_correct?: boolean;
+    score?: number;
+    ai_feedback?: string;
+    detailed_analysis?: string;
+  };
 }
 
 export interface QuizResult {
@@ -119,7 +141,9 @@ export interface QuizResult {
   is_correct: boolean;
   correct_answer: string;
   explanation?: string;
-  score: number;
+  score: number;                // 实际得分（0 ~ full_score）
+  full_score?: number;          // ⭐ 新增：该题满分
+  ai_score_pct?: number;        // ⭐ 新增：AI 评分百分比（0~100）
   ai_feedback?: string;
   detailed_analysis?: string;
 }
@@ -182,4 +206,60 @@ export interface OverviewStats {
   mastered_count: number;
   total_quizzes: number;
   average_score: number;
+}
+
+export interface ExamInfo {
+  exam_name?: string;
+  year?: number;
+  number?: number;
+  score?: number;
+  source?: string;      // 试卷全称，如“鞍山市2023年中考数学卷”
+  exam_type?: string;   // 如“真题”（可选）
+}
+
+// ===== 卷子管理 =====
+export interface PaperQuestion {
+  question_id: string;
+  number: number;
+  score: number;
+}
+
+export interface Paper {
+  id: string;
+  name: string;
+  subject: string;
+  year: number;
+  duration?: number;          // ⭐ 考试时长（分钟）
+  total_score: number;
+  question_count: number;
+  questions: PaperQuestion[];
+  created_time: string;
+  updated_time?: string;
+}
+
+export interface PaperCreate {
+  name: string;
+  subject: string;
+  year: number;
+  duration?: number;          // ⭐ 新增
+  questions: PaperQuestion[];
+}
+
+// ===== 卷子对比 =====
+export interface PaperCompareData {
+  paper_name: string;
+  years: number[];
+  total_questions: number;
+  kp_stats: Record<number, Record<string, number>>;
+  type_stats: Record<number, Record<string, number>>;
+  number_stats: Record<number, Record<number, number>>;
+  heatmap: {
+    years: number[];
+    knowledge_points: string[];
+    data: Array<Record<string, any>>; // 每行 { year: number, kp1: count, kp2: count, ... }
+  };
+}
+
+export interface PaperNameList {
+  papers: string[];
 }

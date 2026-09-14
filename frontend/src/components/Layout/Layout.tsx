@@ -11,7 +11,10 @@ import {
   SettingOutlined,
   LogoutOutlined,
   LoginOutlined,
-  UserAddOutlined
+  UserAddOutlined,
+  AreaChartOutlined,
+  ImportOutlined,   // 导入导出图标
+  ToolOutlined,     // 小工具图标
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -26,73 +29,36 @@ const AppLayout: React.FC = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  // 使用全局状态
   const { isLoggedIn, username, logout, checkAuth } = useAuthStore();
 
-  // 组件加载时检查登录状态
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
+  // 菜单项（添加小工具和导入导出）
   const menuItems = [
-    {
-      key: '/',
-      icon: <HomeOutlined />,
-      label: '首页',
-    },
-    {
-      key: '/questions',
-      icon: <BookOutlined />,
-      label: '题目管理',
-    },
-    {
-      key: '/quiz',
-      icon: <FileTextOutlined />,
-      label: '智能组卷',
-    },
-    {
-      key: '/wrong',
-      icon: <BarChartOutlined />,
-      label: '错题本',
-    },
-    {
-      key: '/stats',
-      icon: <BarChartOutlined />,
-      label: '统计分析',
-    },
+    { key: '/', icon: <HomeOutlined />, label: '首页' },
+    { key: '/questions', icon: <BookOutlined />, label: '题目管理' },
+    { key: '/quiz', icon: <FileTextOutlined />, label: '智能组卷' },
+    { key: '/papers', icon: <FileTextOutlined />, label: '卷子管理' },
+    { key: '/wrong', icon: <BarChartOutlined />, label: '错题本' },
+    { key: '/stats', icon: <BarChartOutlined />, label: '统计分析' },
+    { key: '/paper-compare', icon: <AreaChartOutlined />, label: '卷子对比' },
+    // 导入导出（如果你有独立的导入导出页面，可以保留，否则可以忽略）
+    { key: '/import-export', icon: <ImportOutlined />, label: '导入导出' },
+    // 小工具
+    { key: '/utils', icon: <ToolOutlined />, label: '小工具' },
   ];
 
   const userMenuItems = [
     ...(isLoggedIn ? [
-      {
-        key: 'profile',
-        icon: <UserOutlined />,
-        label: `欢迎, ${username}`
-      },
-      {
-        key: 'settings',
-        icon: <SettingOutlined />,
-        label: '设置',
-      },
-      {
-        type: 'divider' as const,
-      },
-      {
-        key: 'logout',
-        icon: <LogoutOutlined />,
-        label: '退出登录',
-      }
+      { key: 'profile', icon: <UserOutlined />, label: `欢迎, ${username}` },
+      { key: 'settings', icon: <SettingOutlined />, label: '设置' },
+      { type: 'divider' as const },
+      { key: 'logout', icon: <LogoutOutlined />, label: '退出登录' }
     ] : [
-      {
-        key: 'login',
-        icon: <LoginOutlined />,
-        label: '登录',
-      },
-      {
-        key: 'register',
-        icon: <UserAddOutlined />,
-        label: '注册',
-      }
+      { key: 'login', icon: <LoginOutlined />, label: '登录' },
+      { key: 'register', icon: <UserAddOutlined />, label: '注册' }
     ])
   ];
 
@@ -147,25 +113,13 @@ const AppLayout: React.FC = () => {
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => setCollapsed(!collapsed)}
-            style={{
-              fontSize: '16px',
-              width: 64,
-              height: 64,
-            }}
+            style={{ fontSize: '16px', width: 64, height: 64 }}
           />
-          
           <Dropdown
-            menu={{
-              items: userMenuItems,
-              onClick: handleUserMenuClick,
-            }}
+            menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
             placement="bottomRight"
           >
-            <Avatar 
-              size="default" 
-              icon={<UserOutlined />} 
-              style={{ cursor: 'pointer' }}
-            />
+            <Avatar size="default" icon={<UserOutlined />} style={{ cursor: 'pointer' }} />
           </Dropdown>
         </Header>
         <Content

@@ -25,7 +25,7 @@ interface QuestionState {
   createQuestion: (question: QuestionCreate) => Promise<string>;
   updateQuestion: (id: string, question: QuestionUpdate) => Promise<void>;
   deleteQuestion: (id: string) => Promise<void>;
-  batchDeleteQuestions: (ids: string[]) => Promise<number>;
+  batchDeleteQuestions: (ids: string[]) => Promise<{ deleted_count: number, conflicts?: Record<string, string> }>;
   clearError: () => void;
   loadCategories: () => Promise<void>;
   generateQuiz: (settings: QuizSettings) => Promise<QuizQuestion[]>;
@@ -56,69 +56,27 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
   },
 
   loadQuestions: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await apiClient.getQuestions(get().filters);
-      
-      let items = response.items || [];
-      if (items.length === 0) {
-        console.log('API返回空数据，使用模拟数据');
-        items = [
-          {
-            id: '1',
-            subject: '数学',
-            type: '选择题',
-            content: '1+1等于几？',
-            answer: '2',
-            difficulty: '基础',
-            options: { A: '1', B: '2', C: '3', D: '4' },
-            explanation: '基本的数学加法运算'
-          },
-          {
-            id: '2',
-            subject: '语文', 
-            type: '填空题',
-            content: '《资治通鉴》的作者是？',
-            answer: '司马光',
-            difficulty: '中等',
-            explanation: '北宋著名史学家司马光主编的编年体通史'
-          }
-        ];
-      }
-      
-      set({ 
-        questions: items,
-        totalCount: items.length,
-        isLoading: false 
-      });
-      
-      get().loadCategories();
-    } catch (error: any) {
-      console.error('加载题目失败，使用模拟数据', error);
-      
-      const mockQuestions = [
-        {
-          id: '1',
-          subject: '数学',
-          type: '选择题',
-          content: '1+1等于几？',
-          answer: '2',
-          difficulty: '基础',
-          options: { A: '1', B: '2', C: '3', D: '4' },
-          explanation: '基本的数学加法运算'
-        }
-      ];
-      
-      set({ 
-        questions: mockQuestions,
-        totalCount: mockQuestions.length,
-        isLoading: false,
-        error: '使用模拟数据（API暂时不可用）'
-      });
-      
-      get().loadCategories();
-    }
-  },
+  set({ isLoading: true, error: null });
+  try {
+    const response = await apiClient.getQuestions(get().filters);
+    const items = response.items || [];
+    console.log('✅ 真实加载的题目数:', items.length, '第一条 id:', items[0]?.id);
+    set({ 
+      questions: items,
+      totalCount: response.total,
+      isLoading: false 
+    });
+    get().loadCategories();
+  } catch (error: any) {
+    console.error('❌ 加载题目失败:', error);
+    set({ 
+      questions: [],      // 不再使用模拟数据
+      totalCount: 0,
+      isLoading: false,
+      error: '加载失败，请刷新重试'
+    });
+  }
+},
 
   getQuestion: async (id: string) => {
     set({ isLoading: true, error: null });
@@ -137,6 +95,8 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await apiClient.createQuestion(question);
+      // 重置页码到第一页
+      set((state) => ({ filters: { ...state.filters, page: 1 } }));
       await get().loadQuestions();
       set({ isLoading: false });
       return response.id;
@@ -167,6 +127,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
     }
   },
 
+  // ⚠️ 修改：删除单个，透传错误信息
   deleteQuestion: async (id: string): Promise<void> => {
     set({ isLoading: true, error: null });
     try {
@@ -174,24 +135,26 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
       await get().loadQuestions();
       set({ isLoading: false });
     } catch (error: any) {
+      // 错误信息已经由 apiClient 封装，包含冲突详情
       set({ 
-        error: error.response?.data?.message || '删除题目失败',
+        error: error.message || '删除题目失败',
         isLoading: false 
       });
-      throw error;
+      throw error; // 继续抛出，让组件捕获并显示
     }
   },
 
-  batchDeleteQuestions: async (ids: string[]): Promise<number> => {
+  // ⚠️ 修改：批量删除，返回冲突信息
+  batchDeleteQuestions: async (ids: string[]): Promise<{ deleted_count: number, conflicts?: Record<string, string> }> => {
     set({ isLoading: true, error: null });
     try {
-      const response = await apiClient.batchDeleteQuestions(ids);
+      const result = await apiClient.batchDeleteQuestions(ids);
       await get().loadQuestions();
       set({ isLoading: false });
-      return response.deleted_count;
+      return result;
     } catch (error: any) {
       set({ 
-        error: error.response?.data?.message || '批量删除失败',
+        error: error.message || '批量删除失败',
         isLoading: false 
       });
       throw error;

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ paper.name }} - 试卷</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Times New Roman', '宋体', serif; background: #f4f4f4; padding: 30px 20px; color: #222; }
+        .paper-container { max-width: 210mm; margin: 0 auto; background: white; padding: 2.5cm 2cm; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: 4px; }
+        .paper-header { text-align: center; border-bottom: 3px double #333; padding-bottom: 20px; margin-bottom: 25px; }
+        .paper-title { font-size: 24px; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px; }
+        .paper-meta { font-size: 14px; color: #555; display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-top: 8px; }
+        .paper-meta span { background: #f0f0f0; padding: 2px 12px; border-radius: 12px; }
+        .question-block { margin-bottom: 28px; page-break-inside: avoid; border-bottom: 1px dashed #e0e0e0; padding-bottom: 20px; }
+        .question-block:last-child { border-bottom: none; }
+        .question-header { font-weight: bold; font-size: 16px; margin-bottom: 6px; }
+        .question-header .q-number { color: #1a3e6f; }
+        .question-header .q-score { color: #b22222; font-weight: normal; font-size: 14px; margin-left: 12px; }
+        .question-content { font-size: 15px; line-height: 1.8; margin: 8px 0 12px 0; padding-left: 2px; white-space: pre-wrap; word-break: break-word; }
+        .question-options { list-style: none; padding-left: 28px; font-size: 15px; line-height: 1.9; }
+        .question-options li { margin-bottom: 2px; }
+        .question-options .option-letter { font-weight: 600; margin-right: 8px; }
+        .answer-section { margin-top: 12px; padding: 10px 16px; background: #f8faff; border-left: 4px solid #2a5c8a; border-radius: 0 4px 4px 0; font-size: 14px; }
+        .answer-section .label { font-weight: bold; color: #1a3e6f; margin-right: 6px; }
+        .answer-section .answer-text { color: #b22222; font-weight: 600; }
+        .answer-section .explanation-text { color: #2e7d32; margin-top: 4px; }
+        .answer-section .kp-text { color: #6a1b9a; margin-top: 4px; font-size: 13px; }
+        .end-answers { margin-top: 30px; padding: 15px 20px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; }
+        .end-answers h3 { margin-bottom: 10px; color: #1a3e6f; }
+        .end-answers table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .end-answers th, .end-answers td { padding: 6px 10px; border: 1px solid #ddd; text-align: left; }
+        .end-answers th { background: #eaeaea; }
+        .paper-footer { margin-top: 30px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #ddd; padding-top: 15px; }
+        @media print {
+            body { background: white; padding: 0; }
+            .paper-container { box-shadow: none; border-radius: 0; padding: 1.5cm 1.8cm; max-width: 100%; }
+            .question-block { page-break-inside: avoid; border-bottom-color: #ccc; }
+            .paper-meta span { background: #eee; }
+            .answer-section { background: #f5f7fa; border-left-color: #1a3e6f; }
+            .end-answers { background: #f5f5f5; }
+        }
+        @media screen and (max-width: 600px) {
+            .paper-container { padding: 1.2cm 1cm; }
+            .paper-title { font-size: 20px; }
+            .paper-meta { font-size: 12px; gap: 12px; }
+            .question-content { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="paper-container">
+        <div class="paper-header">
+            <div class="paper-title">{{ paper.name }}</div>
+            <div class="paper-meta">
+                <span>📘 学科：{{ paper.subject }}</span>
+                <span>📅 年份：{{ paper.year }}</span>
+                <span>📝 题量：{{ question_count }} 题</span>
+                <span>⭐ 总分：{{ total_score }} 分</span>
+            </div>
+        </div>
+
+        {% for q in questions %}
+        <div class="question-block">
+            <div class="question-header">
+                <span class="q-number">{{ q.number }}.</span>
+                {% if show_score %}
+                <span class="q-score">（{{ q.score }} 分）</span>
+                {% endif %}
+            </div>
+            <div class="question-content">{{ q.content }}</div>
+
+            {% if q.options and q.options|length > 0 %}
+            <ul class="question-options">
+                {% for letter, text in q.options.items() %}
+                <li><span class="option-letter">{{ letter }}.</span> {{ text }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <!-- 答案显示：每题下方 -->
+            {% if show_answer and answer_position == 'inline' %}
+            <div class="answer-section">
+                <div><span class="label">✅ 答案：</span><span class="answer-text">{{ q.answer or '未提供' }}</span></div>
+                {% if show_explanation and q.explanation %}
+                <div class="explanation-text"><span class="label">📖 解析：</span>{{ q.explanation }}</div>
+                {% endif %}
+                {% if show_knowledge and q.knowledge_points and q.knowledge_points|length > 0 %}
+                <div class="kp-text"><span class="label">🏷️ 知识点：</span>{{ q.knowledge_points|join('、') }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- 答案集中显示 -->
+        {% if show_answer and answer_position == 'end' and all_answers %}
+        <div class="end-answers">
+            <h3>📌 参考答案</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>题号</th>
+                        <th>答案</th>
+                        {% if show_explanation %}<th>解析</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ans in all_answers %}
+                    <tr>
+                        <td>{{ ans.number }}</td>
+                        <td>{{ ans.answer or '未提供' }}</td>
+                        {% if show_explanation %}<td>{{ ans.explanation or '' }}</td>{% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div class="paper-footer">
+            由 全能题目管理器 (QTG) 生成 &bull; {{ generated_time }}
+        </div>
+    </div>
+</body>
+</html>

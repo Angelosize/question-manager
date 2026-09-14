@@ -1,58 +1,708 @@
 [
   {
-    "question_id": "QACB265BE",
+    "question_id": "Q0F47DB17",
     "question_data": {
-      "id": "QACB265BE",
-      "subject": "语文",
-      "type": "填空题",
-      "content": "《资治通鉴》作者？",
-      "options": {},
-      "answer": "司马光",
-      "explanation": null,
+      "id": "Q0F47DB17",
+      "subject": "物理",
+      "type": "选择题",
+      "content": "小贝学习成语“另辟蹊径”后查阅了有关资料，得知“径”是指仅容人步行通过的小路，马车无法通过。根据该资料的描述，“径”的宽度最接近",
+      "options": {
+        "A": "0.05m",
+        "B": "0.5m",
+        "C": "5m",
+        "D": "50m"
+      },
+      "answer": "B",
+      "explanation": "",
       "difficulty": "基础",
-      "knowledge_points": null,
-      "chapter": null,
-      "tags": [],
-      "source": null,
-      "note": null,
-      "created_time": "2026-04-25 08:00:47",
-      "updated_time": "2026-04-25 09:23:48",
+      "knowledge_points": "成语解释、文化常识",
+      "chapter": "",
+      "tags": [
+        "成语解释",
+        "文化常识"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
       "status": "active",
-      "review_count": 6,
-      "last_review": "2026-04-25 12:13:35",
-      "wrong_count": 5,
-      "last_wrong": "2026-04-25 12:19:34"
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "Q0F47DB17",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "1.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年",
+        "source_page": 1
+      }
     },
     "user_answers": [
       {
-        "answer": "司马迁",
-        "time": "2026-04-25 11:08:42"
-      },
-      {
         "answer": "",
-        "time": "2026-04-25 11:08:49"
-      },
-      {
-        "answer": "司马迁",
-        "time": "2026-04-25 11:18:59"
-      },
-      {
-        "answer": "傻子",
-        "time": "2026-04-25 12:13:35"
-      },
-      {
-        "answer": "111455514\n",
-        "time": "2026-04-25 12:19:34"
-      },
-      {
-        "answer": "长江",
-        "time": "2026-04-25 12:46:46"
+        "time": "2026-09-14 19:19:38"
       }
     ],
-    "correct_answer": "司马光",
-    "wrong_count": 6,
-    "first_wrong": "2026-04-25 11:08:42",
-    "last_wrong": "2026-04-25 12:46:46",
+    "correct_answer": "B",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "Q038FA6DF",
+    "question_data": {
+      "id": "Q038FA6DF",
+      "subject": "物理",
+      "type": "选择题",
+      "content": "如图所示，小明手上拿着一个葡萄，它的尺寸大小L约为",
+      "options": {
+        "A": "2dm",
+        "B": "2cm",
+        "C": "2mm",
+        "D": "2m"
+      },
+      "answer": "B",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "长度估测、单位换算",
+      "chapter": "",
+      "tags": [
+        "长度估测",
+        "单位换算"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "Q038FA6DF",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "2.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年",
+        "source_page": 1
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "B",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "Q9EEE53A1",
+    "question_data": {
+      "id": "Q9EEE53A1",
+      "subject": "物理",
+      "type": "选择题",
+      "content": "如图是志愿军吹响冲锋号的场景，根据图片信息，冲锋号的长度大概是",
+      "options": {
+        "A": "150mm",
+        "B": "30cm",
+        "C": "30m",
+        "D": "150dm"
+      },
+      "answer": "B",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "长度估测、单位换算",
+      "chapter": "",
+      "tags": [
+        "长度估测",
+        "单位换算"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "Q9EEE53A1",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "3.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年",
+        "source_page": 1
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "B",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "QCE2F3A97",
+    "question_data": {
+      "id": "QCE2F3A97",
+      "subject": "物理",
+      "type": "选择题",
+      "content": "中医是中国传统医学，通过“望闻问切”来诊断疾病，其中的“切”就是我们平时所说的“号脉”。古人强调每次号脉的时间应不少于脉搏五十次，据此可知中医“号脉”一次大约至少需要",
+      "options": {
+        "A": "5min左右",
+        "B": "3min左右",
+        "C": "1min左右",
+        "D": "20s左右"
+      },
+      "answer": "A",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "中医诊断方法、号脉技巧",
+      "chapter": "",
+      "tags": [
+        "中医诊断方法",
+        "号脉技巧"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "QCE2F3A97",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "4.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年",
+        "source_page": 1
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "A",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "Q939F02C0",
+    "question_data": {
+      "id": "Q939F02C0",
+      "subject": "物理",
+      "type": "多选题",
+      "content": "一名粗心的同学在测量记录中忘记了写单位。在他以下的记录中，单位为分米的是",
+      "options": {
+        "A": "一支新铅笔的长度为0.175",
+        "B": "一本现代汉语字典的厚度为0.35",
+        "C": "一枚1元硬币的厚度为0.24",
+        "D": "一名同学的身高为16.4"
+      },
+      "answer": "BC",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "长度测量、单位换算",
+      "chapter": "",
+      "tags": [
+        "长度测量",
+        "单位换算"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "Q939F02C0",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "5.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年",
+        "source_page": 1
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "BC",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "QD402A8AD",
+    "question_data": {
+      "id": "QD402A8AD",
+      "subject": "物理",
+      "type": "多选题",
+      "content": "采用如图所示的甲、乙两把刻度尺测量同一物块的长度，下列说法正确的是",
+      "options": {
+        "A": "采用甲刻度尺读数更精确些",
+        "B": "甲刻度尺零刻度线没有对齐物块的一端测量也可以",
+        "C": "乙刻度尺的分度值是0.1mm",
+        "D": "采用乙刻度尺，物块长度应记录为2.80cm"
+      },
+      "answer": "ABCD",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "刻度尺读数、长度测量",
+      "chapter": "",
+      "tags": [
+        "刻度尺读数",
+        "长度测量"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "QD402A8AD",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "6.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年",
+        "source_page": 1
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "ABCD",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "Q4BB30108",
+    "question_data": {
+      "id": "Q4BB30108",
+      "subject": "物理",
+      "type": "多选题",
+      "content": "小明四次测量一本书的宽度记录分别为18.21cm、18.22cm、18.23cm、18.33cm，下列说法错误的是",
+      "options": {
+        "A": "小明使用的刻度尺分度值是0.1cm",
+        "B": "测量值18.33cm存在测量误差",
+        "C": "书的宽度的测量值是18.22cm",
+        "D": "选用精密的测量工具可以避免误差"
+      },
+      "answer": "D",
+      "explanation": "",
+      "difficulty": "中等",
+      "knowledge_points": "误差分析、测量工具的使用",
+      "chapter": "",
+      "tags": [
+        "误差分析",
+        "测量工具的使用"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "Q4BB30108",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "7.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年",
+        "source_page": 1
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "D",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "Q9191727B",
+    "question_data": {
+      "id": "Q9191727B",
+      "subject": "物理",
+      "type": "选择题",
+      "content": "小明同学参加中考体育技能测试，下列数据最符合实际情况的是",
+      "options": {
+        "A": "实心球的成绩为60m",
+        "B": "1min跳绳170次",
+        "C": "立定跳远的成绩为8m",
+        "D": "1000m跑的成绩约为50s"
+      },
+      "answer": "B",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "体育技能测试",
+      "chapter": "",
+      "tags": [
+        "体育技能测试"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "Q9191727B",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "8.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年",
+        "source_page": 1
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "B",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "Q577AA085",
+    "question_data": {
+      "id": "Q577AA085",
+      "subject": "物理",
+      "type": "多选题",
+      "content": "下面是小君同学对日常生活中一些常见物体长度和时间的估计，其中与实际情况相符的是",
+      "options": {
+        "A": "正常成年人的鞋子的长度约为25cm",
+        "B": "教室中课桌高度约为75cm",
+        "C": "演奏一次国歌的时间约为50s",
+        "D": "一个正规篮球的直径约为1dm"
+      },
+      "answer": "ABC",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "长度估测、时间估测",
+      "chapter": "",
+      "tags": [
+        "长度估测",
+        "时间估测"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "Q577AA085",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "9.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年"
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "ABC",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "QDA1D5EE3",
+    "question_data": {
+      "id": "QDA1D5EE3",
+      "subject": "物理",
+      "type": "多选题",
+      "content": "下面的说法，正确的是",
+      "options": {
+        "A": "人的眼迅速眨一下需1s",
+        "B": "正常人的心跳一次约需1s",
+        "C": "一张课桌的高度8dm",
+        "D": "一张纸的厚度约70nm"
+      },
+      "answer": "ABCD",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "时间单位、长度单位、物理量估测",
+      "chapter": "",
+      "tags": [
+        "时间单位",
+        "长度单位",
+        "物理量估测"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "QDA1D5EE3",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "10.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年"
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "ABCD",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "QB679F8D5",
+    "question_data": {
+      "id": "QB679F8D5",
+      "subject": "物理",
+      "type": "填空题",
+      "content": "如图所示，铅笔的长度为______cm.",
+      "options": {},
+      "answer": "",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "长度估测",
+      "chapter": "",
+      "tags": [
+        "长度估测"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "QB679F8D5",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "11.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年"
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "Q19FC5362",
+    "question_data": {
+      "id": "Q19FC5362",
+      "subject": "物理",
+      "type": "填空题",
+      "content": "如图，用A、B两把刻度尺测量同一物体长度，其中_____尺摆放错误，该物体的长度为_____cm；图乙中停表的示数是_____s.",
+      "options": {},
+      "answer": "A 15.5 23.4",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "长度测量、刻度尺使用",
+      "chapter": "",
+      "tags": [
+        "长度测量",
+        "刻度尺使用"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "Q19FC5362",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "12.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年"
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "A 15.5 23.4",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
+    "mastered": false,
+    "review_count": 0
+  },
+  {
+    "question_id": "QEE93FD5B",
+    "question_data": {
+      "id": "QEE93FD5B",
+      "subject": "物理",
+      "type": "填空题",
+      "content": "如图所示，测量硬币的直径，常采用如图所示的方法，转动硬币沿不同方向在刻度尺的不同部位测得球的直径的示数如下表： | 第一次 | 第二次 | 第三次 | 第四次 | |--------|--------|--------|--------| | 1.90cm | 1.91cm | 1.79cm | 1.90cm | 以上表格中第一次测量数据的估计值为______cm，该球的直径是______cm.",
+      "options": {},
+      "answer": "1.90cm 1.90cm",
+      "explanation": "",
+      "difficulty": "基础",
+      "knowledge_points": "长度测量、平均值的计算",
+      "chapter": "",
+      "tags": [
+        "长度测量",
+        "平均值的计算"
+      ],
+      "source": "AI导入卷子",
+      "note": "",
+      "created_time": "2026-09-14 19:18:12",
+      "updated_time": "2026-09-14 19:18:12",
+      "status": "active",
+      "review_count": 1,
+      "last_review": "2026-09-14 19:19:38",
+      "wrong_count": 1,
+      "last_wrong": "2026-09-14 19:19:38",
+      "drawing": null,
+      "original_image": null,
+      "exam": {
+        "question_id": "QEE93FD5B",
+        "exam_name": "八年级物理晨测(一)",
+        "year": 2026,
+        "number": "13.",
+        "score": 3,
+        "source": "八年级物理晨测(一) 2026年"
+      }
+    },
+    "user_answers": [
+      {
+        "answer": "",
+        "time": "2026-09-14 19:19:38"
+      }
+    ],
+    "correct_answer": "1.90cm 1.90cm",
+    "wrong_count": 1,
+    "first_wrong": "2026-09-14 19:19:38",
+    "last_wrong": "2026-09-14 19:19:38",
     "mastered": false,
     "review_count": 0
   }

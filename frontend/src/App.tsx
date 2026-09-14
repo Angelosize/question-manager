@@ -12,6 +12,12 @@ import { useQuestionStore } from './store/questionStore';
 
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ImportExport from './components/Questions/ImportExport';
+import Papers from './pages/Papers';
+import PaperEdit from './pages/PaperEdit';  // ⭐ 新增
+import PaperCompare from './pages/PaperCompare';
+import Utils from './pages/Utils';
+
 
 function App() {
   const { loadQuestions, checkAIStatus } = useQuestionStore();
@@ -27,6 +33,19 @@ function App() {
     return () => clearInterval(interval);
   }, [loadQuestions, checkAIStatus]);
 
+  useEffect(() => {
+    const checkKatex = () => {
+      if (typeof window !== 'undefined' && (window as any).katex) {
+        console.log('🎉 KaTeX已加载，可以渲染数学公式！');
+        return true;
+      }
+      console.warn('⚠️ KaTeX尚未加载，请检查CDN');
+      return false;
+    };
+    const timer = setTimeout(checkKatex, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <ConfigProvider locale={zhCN}>
       <AntdApp>
@@ -38,9 +57,13 @@ function App() {
               <Route path="quiz" element={<Quiz />} />
               <Route path="wrong" element={<WrongQuestions />} />
               <Route path="stats" element={<Statistics />} />
-              
+              <Route path="/import-export" element={<ImportExport />} />
               <Route path="/register" element={<Register />} />
               <Route path="/login" element={<Login />} />
+              <Route path="papers" element={<Papers />} />
+              <Route path="papers/:id/edit" element={<PaperEdit />} />  {/* ⭐ 新增路由 */}
+              <Route path="paper-compare" element={<PaperCompare />} />
+              <Route path="utils" element={<Utils />} />
             </Route>
           </Routes>
         </Router>

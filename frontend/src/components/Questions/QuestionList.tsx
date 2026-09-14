@@ -1,34 +1,69 @@
-import React, { useState, useEffect } from 'react'  // 添加 useState 和 useEffect 导入
-import { Table, Button, Space, Tag, Card, Input } from 'antd'  // 添加 Input 导入
-import { EditOutlined, DeleteOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons'  // 添加 SearchOutlined 导入
-import { Question } from '../../types'
-import { useQuestionStore } from '../../store/questionStore'
-import CategorySelectors from '../Common/CategorySelectors'  // 确保路径正确
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Space, Tag, Card, Input } from 'antd';
+import { EditOutlined, DeleteOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
+import { Question } from '../../types';
+import { useQuestionStore } from '../../store/questionStore';
+import CategorySelectors from '../Common/CategorySelectors';
 
 interface QuestionListProps {
-  onEdit: (question: Question) => void
+  onEdit: (question: Question) => void;
+  onViewDetail: (question: Question) => void;
+  onDelete: (id: string) => void;
+  onSelectionChange?: (selectedIds: string[]) => void;
 }
 
-const QuestionList: React.FC<QuestionListProps> = ({ onEdit }) => {
-  const { questions, isLoading, deleteQuestion, setFilters } = useQuestionStore()
-  const [searchText, setSearchText] = useState('')
-  const [localFilters, setLocalFilters] = useState({})
+const QuestionList: React.FC<QuestionListProps> = ({
+  onEdit,
+  onViewDetail,
+  onDelete,
+  onSelectionChange,
+}) => {
+  const { questions, isLoading, filters, setFilters } = useQuestionStore();
+  const [searchText, setSearchText] = useState('');
+  const [localFilters, setLocalFilters] = useState({});
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
+  // 搜索框防抖
   useEffect(() => {
-    // 防抖处理搜索
     const timer = setTimeout(() => {
       setFilters({
         ...localFilters,
         keyword: searchText || undefined,
-      })
-    }, 500)
+        page: 1, // 搜索时重置到第一页
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchText, localFilters, setFilters]);
 
-    return () => clearTimeout(timer)
-  }, [searchText, localFilters, setFilters])
-
+  // 筛选器变化处理
   const handleFilterChange = (filters: any) => {
-    setLocalFilters(filters)
-  }
+    setLocalFilters(filters);
+    setFilters({
+      ...filters,
+      page: 1, // 筛选变化时重置到第一页
+    });
+  };
+
+  // 分页变更处理
+  const handleTableChange = (pagination: any) => {
+    setFilters({
+      page: pagination.current,
+      limit: pagination.pageSize,
+    });
+  };
+
+  // 行选择配置
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (selectedKeys: React.Key[]) => {
+      const ids = selectedKeys as string[];
+      setSelectedRowKeys(selectedKeys);
+      if (onSelectionChange) {
+        onSelectionChange(ids);
+      }
+    },
+    columnWidth: 40,
+  };
 
   const columns = [
     {
@@ -78,12 +113,22 @@ const QuestionList: React.FC<QuestionListProps> = ({ onEdit }) => {
       render: (difficulty: string) => (
         <Tag
           color={
-            difficulty === '基础' ? 'green' : 
-            difficulty === '中等' ? 'orange' : 'red'
+            difficulty === '基础' ? 'green' : difficulty === '中等' ? 'orange' : 'red'
           }
         >
           {difficulty}
         </Tag>
+      ),
+    },
+    {
+      title: '考试来源',
+      dataIndex: ['exam', 'exam_name'],
+      key: 'exam',
+      width: 130,
+      render: (exam_name: string, record: Question) => (
+        <span title={record.exam?.source || ''}>
+          {exam_name || '-'}
+        </span>
       ),
     },
     {
@@ -96,29 +141,37 @@ const QuestionList: React.FC<QuestionListProps> = ({ onEdit }) => {
             type="text"
             icon={<EyeOutlined />}
             size="small"
-            onClick={() => console.log('查看', record)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetail(record);
+            }}
           />
           <Button
             type="text"
             icon={<EditOutlined />}
             size="small"
-            onClick={() => onEdit(record)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(record);
+            }}
           />
           <Button
             type="text"
             danger
             icon={<DeleteOutlined />}
             size="small"
-            onClick={() => deleteQuestion(record.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(record.id);
+            }}
           />
         </Space>
       ),
     },
-  ]
+  ];
 
   return (
     <div className="space-y-4">
-      {/* 搜索框 */}
       <Card size="small">
         <Input
           placeholder="搜索题目内容、答案、解析..."
@@ -129,28 +182,44 @@ const QuestionList: React.FC<QuestionListProps> = ({ onEdit }) => {
         />
       </Card>
 
-      {/* 分类筛选器 */}
       <CategorySelectors onFilterChange={handleFilterChange} />
 
-      {/* 题目表格 */}
       <Card>
         <Table
           columns={columns}
           dataSource={questions}
           loading={isLoading}
           rowKey="id"
+          rowSelection={rowSelection}
+          onRow={(record) => ({
+            onClick: (e) => {
+              const target = e.target as HTMLElement;
+              if (
+                target.closest('.ant-btn') ||
+                target.closest('.ant-space-item') ||
+                target.closest('.ant-checkbox')
+              ) {
+                return;
+              }
+              onViewDetail(record);
+            },
+            style: { cursor: 'pointer' },
+          })}
           pagination={{
-            pageSize: 10,
+            current: filters.page || 1,
+            pageSize: filters.limit || 10,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) =>
               `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+            pageSizeOptions: ['10', '20', '50', '100'],
           }}
-          scroll={{ x: 800 }}
+          onChange={handleTableChange}
+          scroll={{ x: 900 }}
         />
       </Card>
     </div>
-  )
-}
+  );
+};
 
-export default QuestionList
+export default QuestionList;

@@ -1,266 +1,396 @@
-import React, { useState } from 'react'
-import {
-  Card,
-  Button,
+import React, { useState } from 'react';
+import { 
+  Button, 
+  Card, 
+  Upload, 
+  message, 
+  Modal, 
   Space,
-  Upload,
-  message,
-  Modal,
-  Form,
-  Select,
-  Divider,
-  Steps,
+  Typography,
   Alert,
-} from 'antd'
-import {
-  UploadOutlined,
-  DownloadOutlined,
-  FileExcelOutlined,
-  FileTextOutlined,
-} from '@ant-design/icons'
-import { useAppStore } from '../../store/appStore'
+  Progress
+} from 'antd';
+import { 
+  UploadOutlined, 
+  DownloadOutlined, 
+  RobotOutlined
+} from '@ant-design/icons';
+import type { UploadProps } from 'antd';
+import { useApi } from '../../hooks/useApi';
+import AIImport from './AIImport';  // 新增 AI 导入组件
 
-const { Option } = Select
-const { Step } = Steps
-
-interface ImportSettings {
-  format: 'excel' | 'text'
-  subject: string
-  defaultType: string
-  defaultDifficulty: string
-  defaultSource: string
-}
+const { Title, Text } = Typography;
 
 const ImportExport: React.FC = () => {
-  const [importModalVisible, setImportModalVisible] = useState(false)
-  const [currentStep, setCurrentStep] = useState(0)
-  const [importSettings, setImportSettings] = useState<ImportSettings>({
-    format: 'excel',
-    subject: '',
-    defaultType: '选择题',
-    defaultDifficulty: '中等',
-    defaultSource: '导入',
-  })
-  const { categories } = useAppStore()
+  const [importLoading, setImportLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    success: boolean;
+    imported_count: number;
+    message: string;
+  } | null>(null);
 
-  const handleExport = (format: 'excel' | 'json' | 'text') => {
-    message.success(`正在导出${format.toUpperCase()}格式...`)
-    // 这里会调用导出API
-  }
+  // ===== 新增：AI导入模态框状态 =====
+  const [aiImportVisible, setAiImportVisible] = useState(false);
 
-  const handleImport = async (file: File, settings: ImportSettings) => {
+  // ============================================================
+  //  导出功能
+  // ============================================================
+  const handleExcelExport = async () => {
+    setExportLoading(true);
     try {
-      message.info('开始导入题目...')
+      const response = await fetch('http://localhost:8000/api/import-export/export/excel', {
+        method: 'POST',
+      });
       
-      // 模拟导入过程
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      message.success(`成功导入题目！使用设置: ${JSON.stringify(settings)}`)
-      setImportModalVisible(false)
-      setCurrentStep(0)
+      if (response.ok) {
+        const result = await response.json();
+        const link = document.createElement('a');
+        link.href = `data:${result.mime_type};base64,${result.data}`;
+        link.download = result.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        message.success('Excel导出成功！');
+      } else {
+        message.error('导出失败');
+      }
     } catch (error) {
-      message.error('导入失败')
+      message.error('导出过程中发生错误');
+    } finally {
+      setExportLoading(false);
     }
-  }
+  };
 
-  const steps = [
-    {
-      title: '选择文件',
+  const handleTextExport = async () => {
+    setExportLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/import-export/export/text', {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const link = document.createElement('a');
+        link.href = `data:${result.mime_type};base64,${result.data}`;
+        link.download = result.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        message.success('文本导出成功！');
+      } else {
+        message.error('导出失败');
+      }
+    } catch (error) {
+      message.error('导出过程中发生错误');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // ============================================================
+  //  导入功能
+  // ============================================================
+  const excelUploadProps: UploadProps = {
+    name: 'file',
+    accept: '.xlsx,.xls',
+    showUploadList: false,
+    beforeUpload: (file) => {
+      const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+                     file.type === 'application/vnd.ms-excel';
+      if (!isExcel) {
+        message.error('请上传Excel文件');
+        return false;
+      }
+      return true;
+    },
+    customRequest: async (options) => {
+      const { file, onSuccess, onError } = options;
+      setImportLoading(true);
+      setImportProgress(0);
+      setImportResult(null);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file as File);
+
+        const interval = setInterval(() => {
+          setImportProgress(prev => {
+            if (prev >= 90) {
+              clearInterval(interval);
+              return 90;
+            }
+            return prev + 10;
+          });
+        }, 200);
+
+        const response = await fetch('http://localhost:8000/api/import-export/import/excel', {
+          method: 'POST',
+          body: formData,
+        });
+
+        clearInterval(interval);
+        setImportProgress(100);
+
+        if (response.ok) {
+          const result = await response.json();
+          setImportResult(result);
+          setModalVisible(true);
+          
+          if (result.success) {
+            message.success(result.message);
+            onSuccess?.(result, file as any);
+          } else {
+            message.warning(result.message);
+            onError?.(new Error(result.message), file as any);
+          }
+        } else {
+          throw new Error('导入失败');
+        }
+      } catch (error) {
+        message.error('导入过程中发生错误');
+        onError?.(error as Error, file as any);
+      } finally {
+        setImportLoading(false);
+      }
+    },
+  };
+
+  const handleTextImport = async (text: string) => {
+    setImportLoading(true);
+    setImportProgress(0);
+    setImportResult(null);
+
+    try {
+      const interval = setInterval(() => {
+        setImportProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(interval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      const response = await fetch('http://localhost:8000/api/import-export/import/text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: text }),
+      });
+
+      clearInterval(interval);
+      setImportProgress(100);
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setImportResult(result);
+        setModalVisible(true);
+        if (result.success) {
+          message.success(result.message);
+          window.location.reload();
+        } else {
+          message.warning(result.message);
+        }
+      } else {
+        throw new Error(result.detail || result.error || `导入失败: ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error('导入错误:', error);
+      if (error.message.includes('422')) {
+        message.error('格式错误: 请检查文本格式是否符合要求');
+      } else {
+        message.error(`导入失败: ${error.message}`);
+      }
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const showTextImportModal = () => {
+    Modal.confirm({
+      title: '文本导入题目',
       content: (
-        <div className="text-center py-8">
-          <Upload.Dragger
-            accept={importSettings.format === 'excel' ? '.xlsx,.xls' : '.txt,.text'}
-            multiple={false}
-            beforeUpload={(file) => {
-              handleImport(file, importSettings)
-              return false
-            }}
-            className="import-uploader"
-          >
-            <p className="text-4xl mb-4">
-              {importSettings.format === 'excel' ? (
-                <FileExcelOutlined style={{ color: '#1890ff' }} />
-              ) : (
-                <FileTextOutlined />
-              )}
-            </p>
-            <p className="text-lg font-medium">点击或拖拽文件到此处</p>
-            <p className="text-gray-500">
-              支持 {importSettings.format === 'excel' ? 'Excel (.xlsx, .xls)' : '文本 (.txt)'} 格式
-            </p>
-          </Upload.Dragger>
+        <div>
+          <Text>请输入题目文本内容：</Text>
+          <br />
+          <Text type="secondary">支持格式：</Text>
+          <pre style={{ fontSize: '12px', background: '#f5f5f5', padding: '10px' }}>
+            {`[数学]选择题\n题目内容...\nA. 选项1\nB. 选项2\n答案: A\n解析: ...`}
+          </pre>
         </div>
       ),
-    },
-    {
-      title: '配置选项',
-      content: (
-        <Form layout="vertical" className="mt-6">
-          <Form.Item label="默认学科" required>
-            <Select
-              value={importSettings.subject}
-              onChange={(value) => setImportSettings(prev => ({ ...prev, subject: value }))}
-              placeholder="请选择默认学科"
-            >
-              {categories.subjects.map((subject) => (
-                <Option key={subject} value={subject}>
-                  {subject}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+      onOk: async () => {
+        const text = await new Promise<string>((resolve) => {
+          Modal.confirm({
+            title: '请输入题目文本',
+            width: 600,
+            content: (
+              <div>
+                <textarea 
+                  style={{ 
+                    width: '100%', 
+                    height: '200px', 
+                    marginTop: '10px',
+                    padding: '8px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '4px'
+                  }}
+                  placeholder={`示例：\n[数学]选择题\n1 + 1 = ?\nA. 1\nB. 2\nC. 3\n答案: B`}
+                  onChange={(e) => localStorage.setItem('importText', e.target.value)}
+                />
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+                  提示：使用上方格式，每道题之间用空行分隔
+                </div>
+              </div>
+            ),
+            onOk: () => resolve(localStorage.getItem('importText') || ''),
+            onCancel: () => resolve(''),
+          });
+        });
+        
+        if (text && text.trim().length > 0) {
+          await handleTextImport(text.trim());
+        } else {
+          message.warning('请输入有效的题目文本');
+        }
+      },
+    });
+  };
 
-          <div className="grid grid-cols-2 gap-4">
-            <Form.Item label="默认题型">
-              <Select
-                value={importSettings.defaultType}
-                onChange={(value) => setImportSettings(prev => ({ ...prev, defaultType: value }))}
-              >
-                {categories.types.map((type) => (
-                  <Option key={type} value={type}>
-                    {type}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            <Form.Item label="默认难度">
-              <Select
-                value={importSettings.defaultDifficulty}
-                onChange={(value) => setImportSettings(prev => ({ ...prev, defaultDifficulty: value }))}
-              >
-                {categories.difficulties.map((difficulty) => (
-                  <Option key={difficulty} value={difficulty}>
-                    {difficulty}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </div>
-
-          <Form.Item label="默认来源">
-            <Select
-              value={importSettings.defaultSource}
-              onChange={(value) => setImportSettings(prev => ({ ...prev, defaultSource: value }))}
-            >
-              {categories.sources.map((source) => (
-                <Option key={source} value={source}>
-                  {source}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Alert
-            message="导入说明"
-            description="这些设置将应用于所有导入的题目。如果文件中包含相应的信息，将以文件中的信息为准。"
-            type="info"
-            className="mb-4"
-          />
-        </Form>
-      ),
-    },
-  ]
-
+  // ============================================================
+  //  渲染
+  // ============================================================
   return (
-    <>
-      <Card title="导入导出" className="mb-6">
-        <Space wrap>
-          {/* 导出按钮 */}
-          <Button.Group>
-            <Button
-              type="primary"
+    <div style={{ padding: '20px' }}>
+      <Title level={2}>📤 导入导出管理</Title>
+      
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        {/* 导出功能 */}
+        <Card title="📤 导出题目" bordered={false}>
+          <Space size="middle">
+            <Button 
+              type="primary" 
               icon={<DownloadOutlined />}
-              onClick={() => handleExport('excel')}
+              loading={exportLoading}
+              onClick={handleExcelExport}
+              size="large"
             >
               导出Excel
             </Button>
-            <Button
+            
+            <Button 
               icon={<DownloadOutlined />}
-              onClick={() => handleExport('json')}
-            >
-              导出JSON
-            </Button>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={() => handleExport('text')}
+              loading={exportLoading}
+              onClick={handleTextExport}
+              size="large"
             >
               导出文本
             </Button>
-          </Button.Group>
+          </Space>
+          
+          <div style={{ marginTop: '16px' }}>
+            <Text type="secondary">
+              Excel导出包含完整题目数据，文本导出便于阅读和分享
+            </Text>
+          </div>
+        </Card>
 
-          <Divider type="vertical" />
-
-          {/* 导入按钮 */}
-          <Button.Group>
-            <Button
+        {/* 导入功能 */}
+        <Card title="📥 导入题目" bordered={false}>
+          <Space size="middle" wrap>
+            <Upload {...excelUploadProps}>
+              <Button 
+                icon={<UploadOutlined />}
+                loading={importLoading}
+                size="large"
+              >
+                导入Excel
+              </Button>
+            </Upload>
+            
+            <Button 
               icon={<UploadOutlined />}
-              onClick={() => {
-                setImportSettings(prev => ({ ...prev, format: 'excel' }))
-                setImportModalVisible(true)
-              }}
-            >
-              导入Excel
-            </Button>
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => {
-                setImportSettings(prev => ({ ...prev, format: 'text' }))
-                setImportModalVisible(true)
-              }}
+              loading={importLoading}
+              onClick={showTextImportModal}
+              size="large"
             >
               导入文本
             </Button>
-          </Button.Group>
-        </Space>
 
-        <div className="mt-4 text-sm text-gray-500">
-          <p>📊 支持多种格式导入导出，方便数据迁移和备份</p>
-          <p>⚡ Excel格式支持完整的题目信息和选项</p>
-          <p>📝 文本格式适合批量快速导入</p>
-        </div>
-      </Card>
-
-      {/* 导入模态框 */}
-      <Modal
-        title="导入题目"
-        open={importModalVisible}
-        onCancel={() => {
-          setImportModalVisible(false)
-          setCurrentStep(0)
-        }}
-        width={600}
-        footer={[
-          currentStep > 0 && (
-            <Button key="back" onClick={() => setCurrentStep(currentStep - 1)}>
-              上一步
-            </Button>
-          ),
-          currentStep < steps.length - 1 ? (
-            <Button
-              key="next"
+            {/* ===== 新增：AI智能导入按钮 ===== */}
+            <Button 
+              icon={<RobotOutlined />}
+              onClick={() => setAiImportVisible(true)}
+              size="large"
               type="primary"
-              onClick={() => setCurrentStep(currentStep + 1)}
-              disabled={currentStep === 0 && !importSettings.subject}
+              ghost
             >
-              下一步
+              AI 智能导入
             </Button>
-          ) : (
-            <Button key="submit" type="primary" disabled={!importSettings.subject}>
-              开始导入
-            </Button>
-          ),
+          </Space>
+
+          {importLoading && (
+            <div style={{ marginTop: '16px' }}>
+              <Progress percent={importProgress} status="active" />
+              <Text type="secondary">正在处理导入...</Text>
+            </div>
+          )}
+          
+          <div style={{ marginTop: '16px' }}>
+            <Alert
+              message="导入说明"
+              description={
+                <ul>
+                  <li>Excel导入支持.xlsx和.xls格式</li>
+                  <li>文本导入支持多种自由格式</li>
+                  <li>AI智能导入：粘贴题目原文，自动识别并添加</li>
+                  <li>导入时会自动生成题目ID</li>
+                  <li>重复导入不会创建重复题目</li>
+                </ul>
+              }
+              type="info"
+              showIcon
+            />
+          </div>
+        </Card>
+      </Space>
+
+      {/* 导入结果模态框 */}
+      <Modal
+        title="导入结果"
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setModalVisible(false)}>
+            关闭
+          </Button>
         ]}
       >
-        <Steps current={currentStep} className="mb-6">
-          <Step title="选择文件" />
-          <Step title="配置选项" />
-        </Steps>
-
-        {steps[currentStep].content}
+        {importResult && (
+          <Alert
+            message={importResult.message}
+            type={importResult.success ? 'success' : 'warning'}
+            showIcon
+          />
+        )}
       </Modal>
-    </>
-  )
-}
 
-export default ImportExport
+      {/* ===== 新增：AI导入模态框 ===== */}
+      <AIImport
+        visible={aiImportVisible}
+        onClose={() => setAiImportVisible(false)}
+        onSuccess={() => {
+          // 刷新题目列表（可根据项目实际情况调用 store 的 loadQuestions）
+          window.location.reload();
+        }}
+      />
+    </div>
+  );
+};
+
+export default ImportExport;

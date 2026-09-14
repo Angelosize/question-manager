@@ -4,10 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- 添加KaTeX CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    
     <title>全能题目管理器</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- 可选的加载状态 -->
+    <script>
+      // KaTeX加载检查
+      window.addEventListener('load', function() {
+        if (typeof katex !== 'undefined') {
+          console.log('✅ KaTeX已成功加载');
+        } else {
+          console.warn('❌ KaTeX加载失败');
+        }
+      });
+    </script>
   </body>
 </html>
