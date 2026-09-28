@@ -16,6 +16,7 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import * as math from 'mathjs';
+import { useThemeStore } from '../store/themeStore';
 
 ChartJS.register(
   CategoryScale,
@@ -258,6 +259,7 @@ const Calculator: React.FC = () => {
 
 // ===================== 函数绘图（等比例 XY 坐标轴） =====================
 const FunctionPlotter: React.FC = () => {
+  const isDark = useThemeStore((s) => s.isDark);   // ⭐ 新增
   const [funcExpr, setFuncExpr] = useState('x^2');
   const [xMin, setXMin] = useState(-10);
   const [xMax, setXMax] = useState(10);
@@ -270,12 +272,10 @@ const FunctionPlotter: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(800);
 
-  // ⭐ 默认关闭：原点居中（x 轴永远可见）
   const [autoCenter, setAutoCenter] = useState(false);
 
   const CONTAINER_H = 384;
 
-  // 监听容器宽度
   useEffect(() => {
     const el = chartContainerRef.current;
     if (!el) return;
@@ -303,13 +303,10 @@ const FunctionPlotter: React.FC = () => {
         return;
       }
 
-      // 等比例：x 每单位像素
       const xUnitPx = containerW / xSpan;
-      // y 视野跨度 = 容器高度 / 单位像素
       const ySpan = CONTAINER_H / xUnitPx;
       const halfSpan = ySpan / 2;
 
-      // 采样数据
       const samples = 800;
       const step = xSpan / samples;
       const points: { x: number; y: number }[] = [];
@@ -329,20 +326,16 @@ const FunctionPlotter: React.FC = () => {
         return;
       }
 
-      // ⭐ 计算 y 中心
-      let yCenter = 0;   // 默认：原点居中
+      let yCenter = 0;
       if (autoCenter) {
         const ys = points.map((p) => p.y);
         const dataMin = Math.min(...ys);
         const dataMax = Math.max(...ys);
         yCenter = (dataMin + dataMax) / 2;
 
-        // ⭐ 关键：如果 0 不在视野内，则把 yCenter 拉向 0，保证 x 轴可见
         if (yCenter - halfSpan > 0) {
-          // 数据全在 0 上方 → 让 yMin = 0
           yCenter = halfSpan;
         } else if (yCenter + halfSpan < 0) {
-          // 数据全在 0 下方 → 让 yMax = 0
           yCenter = -halfSpan;
         }
       }
@@ -361,8 +354,9 @@ const FunctionPlotter: React.FC = () => {
           {
             label: `y = ${funcExpr}`,
             data: values,
-            borderColor: 'rgb(53, 162, 235)',
-            backgroundColor: 'rgba(53, 162, 235, 0.1)',
+            // ⭐ 深色模式曲线更亮
+            borderColor: isDark ? '#60a5fa' : 'rgb(53, 162, 235)',
+            backgroundColor: isDark ? 'rgba(96, 165, 250, 0.15)' : 'rgba(53, 162, 235, 0.1)',
             borderWidth: 2,
             pointRadius: 0,
             tension: 0.1,
@@ -379,7 +373,7 @@ const FunctionPlotter: React.FC = () => {
   useEffect(() => {
     plotFunction();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [funcExpr, xMin, xMax, containerW, autoCenter]);
+  }, [funcExpr, xMin, xMax, containerW, autoCenter, isDark]);   // ⭐ 加 isDark
 
   // 自定义插件：绘制 XY 坐标轴
   const axisArrowPlugin = {
@@ -400,8 +394,10 @@ const FunctionPlotter: React.FC = () => {
       const arrowSize = 8;
 
       ctx.save();
-      ctx.strokeStyle = '#333';
-      ctx.fillStyle = '#333';
+      // ⭐ 深色模式轴用浅色
+      const axisColor = isDark ? '#e2e8f0' : '#333';
+      ctx.strokeStyle = axisColor;
+      ctx.fillStyle = axisColor;
       ctx.lineWidth = 2;
 
       // X 轴（沿 y=0）
@@ -448,7 +444,7 @@ const FunctionPlotter: React.FC = () => {
       if (x0InRange && y0InRange) {
         ctx.beginPath();
         ctx.arc(x0Pixel, y0Pixel, 3.5, 0, 2 * Math.PI);
-        ctx.fillStyle = '#333';
+        ctx.fillStyle = axisColor;
         ctx.fill();
 
         ctx.font = '12px sans-serif';
@@ -474,11 +470,14 @@ const FunctionPlotter: React.FC = () => {
         grid: {
           color: (ctx: any) => {
             if (ctx.tick && ctx.tick.value === 0) return 'transparent';
-            return 'rgba(0,0,0,0.06)';
+            return isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
           },
         },
         ticks: {
-          color: (ctx: any) => (ctx.tick && ctx.tick.value === 0 ? '#333' : '#666'),
+          color: (ctx: any) => {
+            if (ctx.tick && ctx.tick.value === 0) return isDark ? '#e2e8f0' : '#333';
+            return isDark ? '#94a3b8' : '#666';
+          },
         },
       },
       y: {
@@ -487,16 +486,25 @@ const FunctionPlotter: React.FC = () => {
         grid: {
           color: (ctx: any) => {
             if (ctx.tick && ctx.tick.value === 0) return 'transparent';
-            return 'rgba(0,0,0,0.06)';
+            return isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
           },
         },
         ticks: {
-          color: (ctx: any) => (ctx.tick && ctx.tick.value === 0 ? '#333' : '#666'),
+          color: (ctx: any) => {
+            if (ctx.tick && ctx.tick.value === 0) return isDark ? '#e2e8f0' : '#333';
+            return isDark ? '#94a3b8' : '#666';
+          },
         },
       },
     },
     plugins: {
-      legend: { display: true, position: 'top' as const },
+      legend: {
+        display: true,
+        position: 'top' as const,
+        labels: {
+          color: isDark ? '#e2e8f0' : '#333',
+        },
+      },
       zoom: {
         pan: {
           enabled: true,
@@ -549,7 +557,7 @@ const FunctionPlotter: React.FC = () => {
           <Space>
             <Tooltip title="关闭时原点居中；开启时让曲线数据居中（仍保证 x 轴可见）">
               <span style={{ fontSize: 13 }}>
-                视野 <InfoCircleOutlined style={{ color: '#888' }} />
+                视野 <InfoCircleOutlined style={{ color: 'var(--text-muted)' }} />
               </span>
             </Tooltip>
             <Switch
@@ -573,10 +581,12 @@ const FunctionPlotter: React.FC = () => {
         style={{
           height: CONTAINER_H,
           width: '100%',
-          border: '1px solid #f0f0f0',
+          // ⭐ 用 CSS 变量适配深色
+          border: '1px solid var(--border-color)',
           borderRadius: 6,
           padding: 8,
-          background: '#fff',
+          background: 'var(--bg-card)',
+          transition: 'background 0.3s, border-color 0.3s',
         }}
       >
         {chartData ? (
@@ -588,7 +598,7 @@ const FunctionPlotter: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#aaa',
+              color: 'var(--text-muted)',
             }}
           >
             输入函数表达式后自动绘图
@@ -599,7 +609,7 @@ const FunctionPlotter: React.FC = () => {
       <div className="mt-3 text-gray-500 text-sm">
         🖱️ 滚轮缩放 · Shift+拖动平移 · 坐标轴 1:1 等比例
         <br />
-        <span style={{ fontSize: 12, color: '#888' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
           当前：x 单位 = {xUnitPx.toFixed(1)}px · y 单位 = {yUnitPx.toFixed(1)}px
           {Math.abs(xUnitPx - yUnitPx) < 0.5 && ' ✅ 等比例'}
         </span>
@@ -612,6 +622,7 @@ const FunctionPlotter: React.FC = () => {
 
 // ===================== 统计工具 =====================
 const StatisticsTool: React.FC = () => {
+  const isDark = useThemeStore((s) => s.isDark);   // ⭐ 新增
   const [inputData, setInputData] = useState('1, 2, 3, 4, 5, 6, 7, 8, 9, 10');
   const [parsedData, setParsedData] = useState<number[]>([]);
   const [stats, setStats] = useState<{
@@ -659,11 +670,40 @@ const StatisticsTool: React.FC = () => {
       {
         label: '数据值',
         data: parsedData,
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: isDark ? 'rgba(96, 165, 250, 0.6)' : 'rgba(75, 192, 192, 0.6)',
+        borderColor: isDark ? 'rgba(96, 165, 250, 1)' : 'rgba(75, 192, 192, 1)',
         borderWidth: 1,
       },
     ],
+  };
+
+  const barOptions = {
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: isDark ? '#e2e8f0' : '#333',
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+        },
+        ticks: {
+          color: isDark ? '#94a3b8' : '#666',
+        },
+      },
+      y: {
+        grid: {
+          color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+        },
+        ticks: {
+          color: isDark ? '#94a3b8' : '#666',
+        },
+      },
+    },
   };
 
   return (
@@ -697,11 +737,11 @@ const StatisticsTool: React.FC = () => {
 
       {parsedData.length > 0 && (
         <div className="h-80">
-          <Bar data={chartData} options={{ maintainAspectRatio: false }} />
+          <Bar data={chartData} options={barOptions} />
         </div>
       )}
     </div>
   );
 };
 
-export default Utils; 
+export default Utils;

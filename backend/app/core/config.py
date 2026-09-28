@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
 from typing import List, Dict, Any
+from dotenv import load_dotenv
+
+# ⭐ 加载项目根目录的 .env
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -16,14 +20,14 @@ QUESTION_EXAMS_FILE = DATA_DIR / "question_exams.json"
 
 # 默认分类
 DEFAULT_SUBJECTS = ["数学", "语文", "英语", "物理", "化学", "生物", "历史", "地理", "政治", "通用"]
-DEFAULT_TYPES = ["选择题", "填空题", "解答题", "判断题", "简答题", "计算题", "证明题", "综合题", "实验题", "作文题"]
+DEFAULT_TYPES = ["选择题", "多选题", "填空题", "作图题", "解答题", "判断题", "简答题", "计算题", "证明题", "综合题", "实验题", "作文题"]
 DEFAULT_DIFFICULTIES = ["基础", "中等", "拔高", "竞赛", "入门", "熟练", "精通"]
 DEFAULT_SOURCES = ["教材", "教辅", "真题", "模拟", "自编", "网络"]
 DEFAULT_TAGS = ["常考", "易错", "重点", "难点", "典型", "综合", "创新"]
 
 # AI配置
 ZHIPU_CONFIG = {
-    "api_key": os.getenv("ZHIPU_API_KEY", "348f63adc0b541f0956caf08604d76b1.lJBTPG5JsdUhdsXa"),  # 建议从环境变量读取
+    "api_key": os.getenv("ZHIPU_API_KEY", ""),  # 只从环境变量读取，不再硬编码
     "model": os.getenv("ZHIPU_MODEL", "glm-4-flash"),
     "base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
     "timeout": 240  # s

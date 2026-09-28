@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Question, QuestionCreate, QuestionUpdate, QuestionListResponse, FilterParams, QuizSettings, QuizResponse, QuizAnswer, QuizResult, PaperCompareData } from '../types';
+import { Question, QuestionCreate, QuestionUpdate, QuestionListResponse, FilterParams, QuizSettings, QuizResponse, QuizAnswer, PaperCompareData } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -160,7 +160,6 @@ class ApiClient {
     }
   }
 
-  // 同步提交（兼容）
   async submitQuiz(answers: QuizAnswer[]): Promise<QuizResponse> {
     try {
       const response = await this.client.post('/api/quiz/submit', { answers }, {
@@ -180,7 +179,6 @@ class ApiClient {
     }
   }
 
-  // ⭐ 异步提交（带进度）
   async submitQuizAsync(answers: QuizAnswer[]): Promise<{ task_id: string }> {
     try {
       const response = await this.client.post('/api/quiz/submit-async', { answers });
@@ -191,7 +189,6 @@ class ApiClient {
     }
   }
 
-  // ⭐ 查询批改任务状态
   async getQuizSubmitStatus(taskId: string): Promise<any> {
     const response = await this.client.get(`/api/quiz/submit-status/${taskId}`);
     return response.data;
@@ -504,6 +501,45 @@ class ApiClient {
   // ===== 查询任务进度 =====
   async getImportStatus(taskId: string): Promise<any> {
     const response = await this.client.get(`/api/papers/import-status/${taskId}`);
+    return response.data;
+  }
+
+  // ===== 学习界面 API（⭐ 新增） =====
+  async getLearningCache(questionId: string): Promise<{ cached: boolean; data: any }> {
+    const response = await this.client.get(`/api/learn/cache/${questionId}`);
+    return response.data;
+  }
+
+  async getLearningStatus(questionId: string): Promise<{ cached: boolean; task_status: string }> {
+    const response = await this.client.get(`/api/learn/status/${questionId}`);
+    return response.data;
+  }
+
+  async warmupLearning(questionId: string): Promise<any> {
+    const response = await this.client.post('/api/learn/warmup', { question_id: questionId });
+    return response.data;
+  }
+
+  async warmupLearningBatch(questionIds: string[]): Promise<any> {
+    const response = await this.client.post('/api/learn/warmup-batch', { question_ids: questionIds });
+    return response.data;
+  }
+
+  async feynmanCheck(questionId: string, userText: string): Promise<any> {
+    const response = await this.client.post('/api/learn/feynman', {
+      question_id: questionId,
+      user_text: userText,
+    });
+    return response.data;
+  }
+
+  async updateLearningRecord(questionId: string, data: any): Promise<any> {
+    const response = await this.client.post(`/api/learn/record/${questionId}`, data);
+    return response.data;
+  }
+
+  async getLearningRecord(questionId: string): Promise<any> {
+    const response = await this.client.get(`/api/learn/record/${questionId}`);
     return response.data;
   }
 }

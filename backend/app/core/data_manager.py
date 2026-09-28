@@ -813,12 +813,47 @@ class DataManager:
         return False
 
     def delete_paper(self, paper_id: str) -> bool:
-        original_len = len(self.papers)
+        """
+        ⭐ 删除卷子，并清理不再被任何卷子引用的孤儿 exam_mapping。
+        避免 paper_compare 里残留已删卷子的名字。
+        """
+        paper = next((p for p in self.papers if p["id"] == paper_id), None)
+        if not paper:
+            return False
+
+        # 收集该卷子的所有 question_id
+        qids = [
+            q.get("question_id")
+            for q in paper.get("questions", [])
+            if q.get("question_id")
+        ]
+
+        # 1. 从 papers 里移除
         self.papers = [p for p in self.papers if p["id"] != paper_id]
-        if len(self.papers) < original_len:
-            self.save_papers()
-            return True
-        return False
+        self.save_papers()
+
+        # 2. ⭐ 清理孤儿 exam_mapping（只删"不再被任何卷子引用"的）
+        if qids:
+            referenced_elsewhere = set()
+            for p in self.papers:
+                for q in p.get("questions", []):
+                    qid2 = q.get("question_id")
+                    if qid2:
+                        referenced_elsewhere.add(qid2)
+
+            to_remove = set(qids) - referenced_elsewhere
+            if to_remove:
+                before = len(self.exams)
+                self.exams = [
+                    e for e in self.exams
+                    if not (isinstance(e, dict) and e.get("question_id") in to_remove)
+                ]
+                removed = before - len(self.exams)
+                if removed > 0:
+                    self.save_exams()
+                    print(f"🧹 清理 {removed} 条孤儿 exam_mapping")
+
+        return True
 
     def get_paper(self, paper_id: str) -> Optional[Dict]:
         for p in self.papers:

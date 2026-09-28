@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ConfigProvider, App as AntdApp } from 'antd';
+import { ConfigProvider, App as AntdApp, theme as antdTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import Layout from './components/Layout/Layout';
 import Home from './pages/Home';
@@ -9,27 +9,29 @@ import Quiz from './pages/Quiz';
 import WrongQuestions from './pages/WrongBook';
 import Statistics from './pages/Statistics';
 import { useQuestionStore } from './store/questionStore';
+import { useThemeStore } from './store/themeStore';
 
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ImportExport from './components/Questions/ImportExport';
 import Papers from './pages/Papers';
-import PaperEdit from './pages/PaperEdit';  // ⭐ 新增
+import PaperEdit from './pages/PaperEdit';
 import PaperCompare from './pages/PaperCompare';
 import Utils from './pages/Utils';
-
+import Learn from './pages/Learn';
 
 function App() {
   const { loadQuestions, checkAIStatus } = useQuestionStore();
+  const isDark = useThemeStore((s) => s.isDark);
 
   useEffect(() => {
     loadQuestions();
     checkAIStatus();
-    
+
     const interval = setInterval(() => {
       checkAIStatus();
     }, 60000);
-    
+
     return () => clearInterval(interval);
   }, [loadQuestions, checkAIStatus]);
 
@@ -47,7 +49,16 @@ function App() {
   }, []);
 
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider
+      locale={zhCN}
+      theme={{
+        algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#3b82f6',
+          borderRadius: 8,
+        },
+      }}
+    >
       <AntdApp>
         <Router>
           <Routes>
@@ -61,9 +72,10 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/login" element={<Login />} />
               <Route path="papers" element={<Papers />} />
-              <Route path="papers/:id/edit" element={<PaperEdit />} />  {/* ⭐ 新增路由 */}
+              <Route path="papers/:id/edit" element={<PaperEdit />} />
               <Route path="paper-compare" element={<PaperCompare />} />
               <Route path="utils" element={<Utils />} />
+              <Route path="/learn/:questionId" element={<Learn />} />
             </Route>
           </Routes>
         </Router>
@@ -72,4 +84,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 

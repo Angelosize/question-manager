@@ -230,9 +230,16 @@ const WrongBook: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 200,
+      width: 260,
       render: (_: any, record: WrongQuestionItem) => (
         <Space size="small">
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => navigate(`/learn/${record.question_id}`)}
+          >
+            学这道
+          </Button>
           <Button
             type="text"
             icon={<EyeOutlined />}

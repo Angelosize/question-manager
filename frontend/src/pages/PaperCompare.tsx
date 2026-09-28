@@ -67,7 +67,6 @@ const PaperCompare: React.FC = () => {
     setSelectedPaper(value);
   };
 
-  // 准备热力图数据（用表格展示，每行一个年份，列为知识点）
   const renderHeatmap = () => {
     if (!data) return null;
     const { heatmap } = data;
@@ -79,23 +78,48 @@ const PaperCompare: React.FC = () => {
     const allValues = heatmap.data.flatMap(row => kps.map(kp => row[kp] || 0));
     const maxVal = Math.max(1, ...allValues);
 
+    // ⭐ 深色模式下的颜色计算
     const getColor = (value: number) => {
-      if (value === 0) return '#f0f0f0';
+      if (value === 0) return 'var(--border-soft)';
       const intensity = value / maxVal;
+      // 浅色模式：白 → 蓝
       const r = 255 - Math.round(intensity * 200);
       const g = 255 - Math.round(intensity * 150);
       const b = 255 - Math.round(intensity * 100);
       return `rgb(${r}, ${g}, ${b})`;
     };
 
+    // 文字颜色：浅色模式强度大时用白，深色模式都可用亮色
+    const getTextColor = (value: number) => {
+      return value > maxVal * 0.5 ? '#fff' : 'var(--text-primary)';
+    };
+
     return (
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto' }} className="heatmap-wrapper">
         <table style={{ borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead>
             <tr>
-              <th style={{ padding: '6px 8px', backgroundColor: '#fafafa', border: '1px solid #e8e8e8' }}>年份</th>
+              <th
+                style={{
+                  padding: '6px 8px',
+                  backgroundColor: 'var(--border-soft)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                年份
+              </th>
               {kps.map(kp => (
-                <th key={kp} style={{ padding: '6px 8px', backgroundColor: '#fafafa', border: '1px solid #e8e8e8', minWidth: '80px' }}>
+                <th
+                  key={kp}
+                  style={{
+                    padding: '6px 8px',
+                    backgroundColor: 'var(--border-soft)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--text-primary)',
+                    minWidth: '80px',
+                  }}
+                >
                   {kp}
                 </th>
               ))}
@@ -104,7 +128,15 @@ const PaperCompare: React.FC = () => {
           <tbody>
             {heatmap.data.map((row, idx) => (
               <tr key={idx}>
-                <td style={{ padding: '6px 8px', border: '1px solid #e8e8e8', fontWeight: 'bold' }}>
+                <td
+                  style={{
+                    padding: '6px 8px',
+                    border: '1px solid var(--border-color)',
+                    fontWeight: 'bold',
+                    color: 'var(--text-primary)',
+                    backgroundColor: 'var(--bg-card)',
+                  }}
+                >
                   {row.year}
                 </td>
                 {kps.map(kp => {
@@ -114,10 +146,10 @@ const PaperCompare: React.FC = () => {
                       key={kp}
                       style={{
                         padding: '6px 8px',
-                        border: '1px solid #e8e8e8',
+                        border: '1px solid var(--border-color)',
                         backgroundColor: getColor(val),
                         textAlign: 'center',
-                        color: val > maxVal * 0.5 ? '#fff' : '#333'
+                        color: getTextColor(val),
                       }}
                     >
                       {val > 0 ? val : ''}
@@ -128,13 +160,12 @@ const PaperCompare: React.FC = () => {
             ))}
           </tbody>
         </table>
-        <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
           颜色深浅表示该知识点在该年份出现的次数
         </div>
       </div>
     );
   };
-
   // 准备折线图数据：知识点频次变化
   const renderLineChart = () => {
     if (!data) return null;

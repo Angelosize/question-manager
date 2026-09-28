@@ -2,8 +2,9 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,js极,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',   // ⭐ 加这行（用 .dark class 控制）
   theme: {
     extend: {
       colors: {

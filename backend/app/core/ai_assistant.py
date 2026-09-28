@@ -138,7 +138,6 @@ class AIAssistant:
     
     # ===== 解析批改结果（优先 JSON，正则兜底） =====
     def _parse_correction_result(self, result_text: str, question_data: Dict, user_answer: str) -> Dict[str, Any]:
-        # 1. 尝试解析 JSON
         try:
             cleaned = re.sub(r'^```(?:json)?\s*', '', result_text, flags=re.MULTILINE)
             cleaned = re.sub(r'\s*```\s*$', '', cleaned, flags=re.MULTILINE)
@@ -161,7 +160,6 @@ class AIAssistant:
         except Exception as e:
             print(f"⚠️ 批改结果 JSON 解析失败，回退正则: {e}")
 
-        # 2. 正则兜底
         is_correct = False
         m = re.search(r'正确性判断\s*[：:]\s*(正确|错误)', result_text)
         if m:
@@ -435,7 +433,6 @@ class AIAssistant:
     def _postprocess_recognized(self, data: Dict[str, Any]) -> Dict[str, Any]:
         content_str = data.get('content', '') or ''
 
-        # 1. 从 content 中剥离选项
         if not data.get('options') and content_str:
             options_found = {}
             first_pos = None
@@ -456,7 +453,6 @@ class AIAssistant:
                     data['content'] = content_str[:first_pos].strip()
                 print(f"   🔧 从题干中剥离选项: {list(options_found.keys())}")
 
-        # 2. 多选题推断
         ans_str = str(data.get('answer', '')).strip()
         ans_norm = ans_str.replace(' ', '').replace('，', '').replace(',', '').upper()
         is_multi_answer = (len(ans_norm) > 1 and re.match(r'^[A-F]+$', ans_norm) is not None)
@@ -464,27 +460,48 @@ class AIAssistant:
         if (is_multi_answer or has_multi_marker) and data.get('type') == '选择题':
             data['type'] = '多选题'
 
-        # 3. 填空题强制纠正
         if data.get('type') in ('计算题', '解答题'):
             if re.search(r'_{2,}|（\s*_{2,}\s*）|\(\s*_{2,}\s*\)', content_str):
                 data['type'] = '填空题'
                 print(f"   🔧 题型修正: 题干含填空线 → 填空题")
 
-        # 4. 分值兜底
+        if data.get('type') in ('实验题', '解答题', '计算题'):
+            has_drawing_cmd = re.search(
+                r'画出|作图|用笔画线|连接电路|画出.*示意图|画出.*光路', content_str
+            )
+            has_subquestion = re.search(r'[（(]\s*[1１一]\s*[)）]', content_str)
+            if has_drawing_cmd and not has_subquestion and len(content_str) <= 80:
+                data['type'] = '作图题'
+                print(f"   🔧 题型修正: 题干含作图指令 → 作图题")
+
+        t = data.get('type', '')
         if not data.get('score') or data['score'] == 0:
             score_match = re.search(r'[（(]\s*(\d+)\s*分\s*[）)]', data.get('content', ''))
             if score_match:
                 data['score'] = int(score_match.group(1))
             else:
-                t = data.get('type', '')
                 if t in ('选择题', '多选题', '填空题'):
                     data['score'] = 3
                 elif t in ('解答题', '计算题'):
                     data['score'] = 10
                 elif t in ('实验题', '简答题'):
                     data['score'] = 6
+                elif t == '作图题':
+                    data['score'] = 2
                 else:
                     data['score'] = 5
+
+        if t == '填空题' and data.get('score', 0) > 6:
+            blank_count = len(re.findall(r'_{2,}', content_str))
+            if blank_count == 0:
+                blank_count = len(re.findall(r'[（(]\s{2,}[)）]', content_str))
+            if blank_count > 0:
+                new_score = min(blank_count * 2, 6)
+                print(f"   🔧 分值修正: 填空题 {blank_count} 空 → {new_score} 分（原 {data['score']}）")
+                data['score'] = new_score
+            else:
+                data['score'] = 3
+                print(f"   🔧 分值修正: 填空题无法计空，强制 3 分")
 
         return data
 
@@ -501,10 +518,12 @@ class AIAssistant:
 必须包含以下字段：
 - content: **纯题干**（字符串），**必须把选项（A. ... B. ... C. ... D. ...）从题干中剥离出去**，只保留提问部分
 - subject: 学科（字符串）
-- type: 题型（字符串），**必须按以下规则严格判断**：
+- type: 题型（字符串），**必须按以下规则严格判断（从上到下优先）**：
+    * 题干含"实验"、"探究"、"测量"等字样**且有多个子问（1）（2）（3）** → "实验题"
     * 题干含"（多选）"、"多选题"、或答案有多个字母（如"BD"、"ACD"）→ "多选题"
     * 答案只有一个字母且有选项 → "选择题"
-    * 题干含空格填空（____）→ "填空题"
+    * 题干含"画出"、"作图"、"用笔画线"且**只有 1 个问题**（无子问）→ "作图题"
+    * 题干**只有 1 个空格填空（____）且无子问** → "填空题"
     * 其他 → 从 [解答题、判断题、简答题、实验题、计算题] 中选最合适的
 - difficulty: 难度（字符串，可选值：基础、中等、拔高）
 - answer: 正确答案，**必须是一个字符串，不能是对象或数组**
@@ -513,6 +532,7 @@ class AIAssistant:
     * 题干中有"（X分）"→ 取 X
     * 否则选择题/多选题 → 3
     * 填空题 → 3
+    * 作图题 → 2
     * 解答题/计算题 → 10
     * 实验题/简答题 → 6
 - knowledge_points: **该题涉及的核心考点（数组），必须使用标准学科术语，1-3 个**
@@ -530,6 +550,9 @@ class AIAssistant:
 
 示例（多选题）：
 {{"content": "（多选）下列各数中，是质数的有（  ）", "subject": "数学", "type": "多选题", "difficulty": "中等", "answer": "BD", "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}}, "score": 3, "knowledge_points": ["质数"]}}
+
+示例（实验题）：
+{{"content": "在测量小灯泡电功率的实验中：（1）请用笔画线...（2）闭合开关前...", "subject": "物理", "type": "实验题", "difficulty": "中等", "answer": "", "options": {{}}, "score": 6, "knowledge_points": ["电功率测量", "电路连接"]}}
 """
         system_prompt = "你是一个专业的教育内容解析助手，能准确提取题目信息，包括分值（score）和核心知识点（knowledge_points）。"
         result_text = self.client.generate(prompt, system_prompt, timeout=90, max_tokens=1500)
@@ -657,19 +680,14 @@ class AIAssistant:
         print(f"⚡ 并发识别完成，耗时 {elapsed:.1f} 秒")
         return results  # type: ignore
 
-    # ===== 分割文本为多段 =====
     def _split_text_into_chunks(self, text: str, num_chunks: int = 2) -> List[str]:
-        """把文本按题号位置均分成 num_chunks 段"""
         if len(text) < 800 or num_chunks <= 1:
             return [text]
-
-        # 找所有题号位置
         num_positions = [
             m.start() for m in re.finditer(r'(?:\n|\A)\s*\d+[.、．]\s', text)
         ]
         if len(num_positions) < num_chunks:
             return [text]
-
         chunk_size = len(text) // num_chunks
         chunks = []
         current_start = 0
@@ -685,32 +703,21 @@ class AIAssistant:
             chunks.append(text[current_start:])
         return chunks if chunks else [text]
 
-    # ===== ⭐ 判断一行是否像题干（用于答案块边界检测） =====
     def _looks_like_question_line(self, line: str) -> bool:
-        """
-        判断一行文本是否像题干（而非答案）。
-        用于答案块解析的边界检测——一旦识别到题干特征，立刻停止。
-        """
         if not line:
             return False
-        # 1. 多选标记
         if re.search(r'[（(]\s*多选\s*[)）]', line):
             return True
-        # 2. 连续下划线（填空）
         if re.search(r'_{2,}', line):
             return True
-        # 3. 空括号（选择题空位）
         if re.search(r'[（(]\s{0,3}[)）]', line):
             return True
-        # 4. 图像引用
         if re.search(r'如[图下]|下图|图[甲乙丙丁]', line):
             return True
-        # 5. 长度阈值（题干一般较长）
         if len(line) > 40:
             return True
         return False
 
-    # ===== 分割 + 识别（⭐ 核心方法） =====
     def split_and_recognize(self, text: str, progress_callback=None) -> List[Dict[str, Any]]:
         def report(stage, current=0, total=0):
             if progress_callback:
@@ -719,7 +726,7 @@ class AIAssistant:
                 except Exception:
                     pass
 
-        print("🚀🚀🚀 SPLIT_AND_RECOGNIZE V7.3 (禁止编造答案) 已执行 🚀🚀🚀")
+        print("🚀🚀🚀 SPLIT_AND_RECOGNIZE V7.6 (选项去重+内容兜底) 已执行 🚀🚀🚀")
 
         if not self.is_available:
             raise Exception("AI服务不可用")
@@ -729,16 +736,13 @@ class AIAssistant:
         print(text[:200])
         print("=" * 50)
 
-        # ============ ⭐ 答案块解析（严格版 + 边界收紧） ============
         answer_map = {}
-        # ⭐ 优先从"参考答案"/"标准答案"开始，遇到【单个空行】即停止
         answer_pattern = re.compile(
             r'(?:参考答案|标准答案|答案解析)\s*[：:]\s*([\s\S]+?)(?=\n\s*\n|\Z)',
             re.IGNORECASE
         )
         answer_match = answer_pattern.search(text)
 
-        # 找不到则退一步用"答案："
         if not answer_match:
             answer_pattern2 = re.compile(
                 r'\n\s*答案\s*[：:]\s*([\s\S]+?)(?=\n\s*\n|\Z)',
@@ -755,7 +759,6 @@ class AIAssistant:
                 if not line:
                     continue
 
-                # ⭐ 严格匹配题号：行首 数字 + 点/顿号（只允许 . 和 、）
                 m = re.match(r'^(\d{1,3})\s*[.、．]\s*(.+)$', line)
                 if not m:
                     continue
@@ -763,16 +766,13 @@ class AIAssistant:
                 num = int(m.group(1))
                 remainder = m.group(2).strip()
 
-                # ⭐⭐ 双保险：一旦 remainder 像题干，答案块提前结束
                 if self._looks_like_question_line(remainder):
                     print(f"   ⚠️ 检测到题干文本，答案块解析提前结束: {remainder[:40]}")
                     break
 
-                # ⭐ 判断"一行多题"：剩余部分含 "数字." 或 "数字、"，且数字前后有空白
                 has_more_nums = re.search(r'(?:^|\s)\d{1,3}\s*[.、．]\s*\S', remainder)
 
                 if has_more_nums and len(remainder) < 200:
-                    # 一行多题（如 "A 2.B 3.C"）
                     parts = re.findall(r'(?:^|\s)(\d{1,3})\s*[.、．]\s*([^\s]+)', line)
                     for num_str, ans_item in parts:
                         try:
@@ -782,7 +782,6 @@ class AIAssistant:
                         except ValueError:
                             continue
                 else:
-                    # 单题（可能是多空答案，整行保留）
                     if remainder:
                         answer_map[num] = remainder
 
@@ -796,7 +795,6 @@ class AIAssistant:
             else:
                 print("⚠️ 无法解析答案块")
 
-        # ============ ⭐ 分段并发调用 AI 分割 ============
         report('splitting', 0, 0)
         num_chunks = 2 if len(text) < 3000 else 3
         chunks = self._split_text_into_chunks(text, num_chunks=num_chunks)
@@ -854,7 +852,6 @@ class AIAssistant:
                 print(f"   ⚠️ 第 {idx+1} 段解析失败: {e}")
             return idx, []
 
-        # ⭐ 并发处理所有段
         chunks_results: List[List[Dict]] = [[] for _ in range(len(chunks))]
         if len(chunks) == 1:
             _, data = _process_chunk((0, chunks[0]))
@@ -874,14 +871,12 @@ class AIAssistant:
                     except Exception as e:
                         print(f"   ⚠️ 某段处理异常: {e}")
 
-        # 按段顺序合并
         split_data = []
         for chunk_data in chunks_results:
             split_data.extend(chunk_data)
 
         print(f"📊 分段合并后共 {len(split_data)} 道题")
 
-        # ============ 过滤无效题目 ============
         if split_data:
             filtered_data = []
             for item in split_data:
@@ -898,18 +893,30 @@ class AIAssistant:
             split_data = filtered_data
             print(f"📊 过滤后剩余 {len(split_data)} 道题")
 
-        # ============ 并发识别 ============
         if split_data and len(split_data) > 0:
             print(f"✅ AI 分割成功，共 {len(split_data)} 道题")
+
+            def _strip_options(orig: str, has_options: bool) -> str:
+                """从原文里剥离选项部分（如果有）"""
+                if not has_options:
+                    return orig
+                first_opt = re.search(r'(?:^|\n)\s*[A-F]\s*[\.\、\．]', orig)
+                if first_opt:
+                    return orig[:first_opt.start()].strip()
+                return orig
 
             def _recognize_one(item):
                 try:
                     recognized = self.recognize_question(item["content"])
                     recognized["number"] = item["number"]
-                    if not recognized.get("content"):
-                        recognized["content"] = item["content"]
 
-                    # ⭐ 关键修复：number 可能是 "12." 字符串，answer_map 键是整数
+                    orig = item.get("content", "") or ""
+                    got = recognized.get("content", "") or ""
+                    if len(got) < 10 or len(got) < len(orig) * 0.3:
+                        stripped = _strip_options(orig, bool(recognized.get("options")))
+                        print(f"   🔧 内容兜底: AI 返回 {len(got)} 字 < 原文 {len(orig)} 字，用剥离后原文 {len(stripped)} 字")
+                        recognized["content"] = stripped
+
                     num_raw = item.get("number")
                     num_key = None
                     if isinstance(num_raw, int):
@@ -954,7 +961,6 @@ class AIAssistant:
             report('done', len(split_data), len(split_data))
             return results
 
-        # ============ 备用正则分割 ============
         print("⚠️ AI 分割失败，使用正则分割（备用）")
         def split_by_number(txt):
             lines = txt.split('\n')
@@ -995,12 +1001,22 @@ class AIAssistant:
 
         print(f"✅ 正则分割成功，共 {len(split_data)} 道题")
 
+        def _strip_options_regex(orig: str, has_options: bool) -> str:
+            if not has_options:
+                return orig
+            first_opt = re.search(r'(?:^|\n)\s*[A-F]\s*[\.\、\．]', orig)
+            if first_opt:
+                return orig[:first_opt.start()].strip()
+            return orig
+
         def _recognize_one_regex(item):
             try:
                 recognized = self.recognize_question(item["content"])
                 recognized["number"] = item["number"]
-                if not recognized.get("content"):
-                    recognized["content"] = item["content"]
+                orig = item.get("content", "") or ""
+                got = recognized.get("content", "") or ""
+                if len(got) < 10 or len(got) < len(orig) * 0.3:
+                    recognized["content"] = _strip_options_regex(orig, bool(recognized.get("options")))
 
                 num_raw = item.get("number")
                 num_key = None
@@ -1035,7 +1051,143 @@ class AIAssistant:
                 report('recognizing', completed, len(split_data))
         report('done', len(split_data), len(split_data))
         return results
+    # ===== 生成学习材料（考点 + 前置 + 分步 + 费曼要点） =====
+    # ===== 生成学习材料（考点 + 前置 + 分步 + 费曼要点） =====
+    def generate_learning_material(self, question_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        为一道题生成完整的学习材料（一次 AI 调用生成全部）。
+        """
+        if not self.is_available:
+            return None
 
+        content = question_data.get('content', '')
+        answer = question_data.get('answer', '')
+        subject = question_data.get('subject', '')
+        q_type = question_data.get('type', '')
+        kp = question_data.get('knowledge_points', '')
+        options = question_data.get('options', {})
+
+        options_str = ""
+        if options and isinstance(options, dict):
+            options_str = " ".join([f"{k}. {v}" for k, v in options.items()])
+
+        prompt = f"""你是资深{subject}老师，请为学生分析这道题，生成一份"教学教案"。
+
+【题目】
+学科：{subject}
+题型：{q_type}
+题干：{content}
+选项：{options_str if options_str else "无"}
+正确答案：{answer}
+知识点：{kp}
+
+【任务】
+请严格按 JSON 返回（不要 markdown 代码块）：
+
+{{
+  "exam_point": {{
+    "title": "一句话考点（≤15字）",
+    "chapter": "所属章节（如'八年级上册·全等三角形'）",
+    "difficulty": "基础" 或 "中等" 或 "拔高",
+    "variants": [
+      "换一种说法1（通俗）",
+      "换一种说法2（生活化类比）",
+      "换一种说法3（另一种角度）"
+    ]
+  }},
+  "prerequisites": [
+    {{
+      "name": "前置知识点名",
+      "reason": "为什么需要它（20字内）",
+      "explanation": "3-5 句话讲解这个前置知识点",
+      "test_question": {{
+        "content": "一道检测小题（选择/判断）",
+        "answer": "答案"
+      }}
+    }}
+  ],
+  "steps": [
+    {{
+      "index": 1,
+      "title": "第1步标题（4-8字）",
+      "content": "这一步要做什么，用大白话讲",
+      "hint": "给一个思考提示",
+      "variants": [
+        "换讲法1（生活化类比）",
+        "换讲法2（另一种切入）"
+      ]
+    }}
+  ],
+  "feynman_prep": {{
+    "key_points": ["学生必须提到的关键点1", "关键点2"],
+    "common_mistakes": ["常见错误1", "常见错误2"]
+  }}
+}}
+
+【要求】
+- prerequisites 2-4 个
+- steps 3-5 步
+- 每个 variants 至少 2 条
+- 全部用中文，语言通俗，像给同桌讲题
+- 直接输出 JSON，不要任何额外文字
+"""
+        system_prompt = "你是一位资深教师，只输出合法 JSON。"
+        try:
+            result_text = self.client.generate(prompt, system_prompt, timeout=120, max_tokens=3000)
+            if not result_text:
+                return None
+
+            cleaned = re.sub(r'^```(?:json)?\s*', '', result_text, flags=re.MULTILINE)
+            cleaned = re.sub(r'\s*```\s*$', '', cleaned, flags=re.MULTILINE)
+            json_match = re.search(r'\{[\s\S]*\}', cleaned)
+            if not json_match:
+                print(f"⚠️ 学习材料 AI 返回无 JSON，原始: {result_text[:300]}")
+                return None
+
+            raw_json = json_match.group()
+            data = self._safe_json_loads(raw_json)
+
+            # ⭐ 字段名容错：examPoint → exam_point，point → exam_point
+            if "exam_point" not in data:
+                for alt in ("examPoint", "point", "exam"):
+                    if alt in data and isinstance(data[alt], dict):
+                        print(f"   🔧 字段名容错: {alt} → exam_point")
+                        data["exam_point"] = data.pop(alt)
+                        break
+
+            # ⭐ 兼容包了一层的情况
+            if "exam_point" not in data and "data" in data and isinstance(data["data"], dict):
+                inner = data["data"]
+                if "exam_point" in inner or "examPoint" in inner:
+                    print(f"   🔧 剥离外层 data 字段")
+                    data = inner
+                    if "exam_point" not in data and "examPoint" in data:
+                        data["exam_point"] = data.pop("examPoint")
+
+            if not isinstance(data.get("exam_point"), dict):
+                print(f"⚠️ 学习材料缺少 exam_point，AI 返回字段: {list(data.keys())}")
+                print(f"   原始返回片段: {raw_json[:300]}")
+                return None
+            if not isinstance(data.get("steps"), list) or len(data["steps"]) == 0:
+                print(f"⚠️ 学习材料缺少 steps，AI 返回字段: {list(data.keys())}")
+                print(f"   原始返回片段: {raw_json[:300]}")
+                return None
+
+            # 补默认值
+            data.setdefault("prerequisites", [])
+            data.setdefault("feynman_prep", {"key_points": [], "common_mistakes": []})
+
+            # 给 steps 补 index
+            for i, s in enumerate(data["steps"], 1):
+                if "index" not in s:
+                    s["index"] = i
+
+            return data
+        except Exception as e:
+            print(f"生成学习材料失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
     # ===== 图片识别（单题） =====
     def recognize_image(self, image_base64: str, mime_type: str = "image/jpeg") -> Dict[str, Any]:
         if not self.is_available:
@@ -1048,10 +1200,10 @@ class AIAssistant:
 - options: 选择题的四个选项，非选择题填 null
 - answer: 正确答案，无法识别时填 null
 - subject: 学科，从 数学、物理、化学、英语、语文 中选
-- type: 题型，从 选择题、多选题、填空题、解答题、实验题、计算题 中选（多选时选"多选题"）
+- type: 题型，从 选择题、多选题、填空题、作图题、解答题、实验题、计算题 中选（多选时选"多选题"）
 - difficulty: 难度，从 基础、中档、较难、压轴 中选
 - knowledge_points: 知识点数组，使用标准学科术语
-- score: 分值，选择题默认3，多选题默认3，填空题默认3，解答题默认10
+- score: 分值，选择题默认3，多选题默认3，填空题默认3，作图题默认2，解答题默认10
 
 输出格式：
 {

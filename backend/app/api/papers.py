@@ -56,14 +56,14 @@ def _get_task(task_id: str) -> Optional[Dict[str, Any]]:
 # ============ 工具函数 ============
 def clean_paper_name(name: str) -> str:
     """
-    移除卷名开头的年份（如 '2025年'、'2024' 等），只保留纯名称。
+    移除卷名开头的年份/届数（如 '2025年'、'2024'、'2026届' 等）。
     例：'2025年高考化学模拟卷' -> '高考化学模拟卷'
+        '2026届九年级物理期中卷' -> '九年级物理期中卷'
     """
     if not name:
         return name
-    cleaned = re.sub(r'^\s*(?:19|20)\d{2}\s*年?\s*', '', name)
+    cleaned = re.sub(r'^\s*(?:19|20)\d{2}\s*年?\s*届?\s*', '', name)
     return cleaned.strip()
-
 
 def _normalize_number(raw: Any) -> Optional[int]:
     """把 '12.' / '12' / 12 / 12.0 统一成 int 12"""
@@ -224,6 +224,78 @@ def _extract_subject_from_split(split_data: List[Dict[str, Any]]) -> Optional[st
     return None
 
 
+# ============ ⭐ 卷名提取（辅助函数） ============
+# 卷名关键词（用于正则）
+_TITLE_KEYWORDS = (
+    r'试卷|考试|测试|真题|模拟卷|调研卷|基础卷|提高卷|培优卷|'
+    r'单元卷|专题卷|练习卷|作业|练习|练习题|月考|期中|期末|联考'
+)
+
+
+def _strip_md_prefix(s: str) -> str:
+    """剥离 Markdown 前缀：# > * - 及空白"""
+    return re.sub(r'^[#>*\-\s]+', '', s).strip()
+
+
+# 关键词正则（用于 finditer 找所有匹配位置）
+_KEYWORD_RE = re.compile(_TITLE_KEYWORDS)
+
+
+def _extract_paper_name(text: str) -> Optional[tuple]:
+    """
+    从文本中提取卷名。
+    返回 (raw_name, cleaned_name) 或 None。
+    策略：
+        1. 对每行，找出所有关键词位置 → 每个位置生成候选（行首到关键词末尾）
+        2. 从候选中选最长且合法的
+        3. 前 5 行优先，再扫全文
+    过滤规则：卷名 ≤ 30 字，不含逗号/句号/分号/顿号
+    """
+    if not text:
+        return None
+
+    def _try_line(raw_line: str) -> Optional[str]:
+        """从一行里找所有候选，返回最长的合法卷名"""
+        ln = _strip_md_prefix(raw_line)
+        if not ln or len(ln) > 60:
+            return None
+
+        candidates = []
+        for m in _KEYWORD_RE.finditer(ln):
+            end = m.end()
+            candidate = ln[:end].strip()
+            # 末尾允许 1 个右括号
+            if end < len(ln) and ln[end] in (')', '）'):
+                candidate += ln[end]
+            # 过滤：长度 ≤ 30，不含逗号/句号/分号/顿号
+            if len(candidate) > 30:
+                continue
+            if re.search(r'[，。；、]', candidate):
+                continue
+            if not candidate:
+                continue
+            candidates.append(candidate)
+
+        if not candidates:
+            return None
+        return max(candidates, key=len)
+
+    # 2a. 前 5 行优先
+    head_lines = text.split('\n')[:5]
+    for ln in head_lines:
+        best = _try_line(ln)
+        if best:
+            return best, clean_paper_name(best)
+
+    # 2b. 全文扫描
+    for ln in text.split('\n'):
+        best = _try_line(ln)
+        if best:
+            return best, clean_paper_name(best)
+
+    return None
+
+
 # ============ 试卷文本处理（支持进度回调 + 页图映射） ============
 async def _process_paper_text(
     text: str,
@@ -270,11 +342,11 @@ async def _process_paper_text(
         if subject_found:
             print(f"📌 从关键词提取学科: {subject_found}")
 
-    # 提取卷名（优先 AI 标记 → 正则 → 学科兜底）
+    # ============ ⭐ 卷名提取（优先 AI 标记 → 首行/全文 → 兜底） ============
     paper_name = None
     raw_name = None
 
-    # ⭐ 1. 优先从 AI 标记提取（图片识别会输出 [试卷标题：XXX]）
+    # 1. 优先从 AI 标记提取（图片识别会输出 [试卷标题：XXX]）
     title_match = re.search(r'\[\s*试卷标题\s*[：:]\s*([^\]\n]+?)\s*\]', text)
     if title_match:
         candidate = title_match.group(1).strip()
@@ -283,20 +355,14 @@ async def _process_paper_text(
             paper_name = clean_paper_name(candidate)
             print(f"📌 从 AI 标记提取卷名: {paper_name}")
 
-    # ⭐ 2. 退一步：从正文里正则找关键词
+    # 2. 从正文首行 / 全文正则提取
     if not paper_name:
-        name_match = re.search(
-            r'([\u4e00-\u9fa5a-zA-Z0-9· ]{2,30}(?:试卷|考试|测试|真题|模拟卷|调研卷|'
-            r'基础卷|提高卷|培优卷|单元卷|专题卷|练习卷|作业|练习|练习题|'
-            r'月考|期中|期末|联考))',
-            text,
-        )
-        if name_match:
-            raw_name = name_match.group(1).strip()
-            paper_name = clean_paper_name(raw_name)
+        result = _extract_paper_name(text)
+        if result:
+            raw_name, paper_name = result
             print(f"📌 从正文正则提取卷名: {paper_name}")
 
-    # ⭐ 3. 兜底：学科·章节 / 学科·年份导入
+    # 3. 兜底：学科·章节 / 学科·年份导入
     if not paper_name:
         subject_for_name = subject_found or "未知"
         chapter_match = re.search(r'第[\u4e00-\u9fa5\d]+章\s*[\u4e00-\u9fa5]{2,10}', text)
@@ -308,7 +374,7 @@ async def _process_paper_text(
         raw_name = paper_name
         print(f"📌 卷名兜底: {paper_name}")
 
-    # ===== 调用 AI（内部已并发）===== → ⭐ 放到线程池
+    # ===== 调用 AI（内部已并发） =====
     _progress('splitting', 0, 0)
     split_data = await asyncio.to_thread(
         ai.split_and_recognize, text, progress_callback=_progress

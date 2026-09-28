@@ -11,7 +11,7 @@ from app.core.data_manager import data_manager
 from app.core.ai_assistant import AIAssistant
 
 # 导入所有路由
-from app.api import questions, quiz, ai, wrong, stats, categories, auth, import_export, papers, paper_compare
+from app.api import questions, quiz, ai, wrong, stats, categories, auth, import_export, papers, paper_compare, learn
 
 # ⚠️ 设置模板目录
 templates_dir = Path(__file__).parent / "templates"
@@ -75,6 +75,8 @@ app.include_router(auth.router, prefix="/api/auth", tags=["认证管理"])
 app.include_router(import_export.router, prefix="/api/import-export", tags=["导入导出"])
 app.include_router(papers.router, prefix="/api/papers", tags=["卷子管理"])
 app.include_router(paper_compare.router, prefix="/api/paper-compare", tags=["卷子对比"])
+app.include_router(learn.router, prefix="/api/learn")
+
 
 # ⚠️ 暴露 templates 以便在路由中使用
 app.templates = templates

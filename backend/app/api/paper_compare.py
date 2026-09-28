@@ -8,6 +8,13 @@ router = APIRouter()
 @router.get("/list-papers")
 async def list_paper_names():
     try:
+        # ⭐ 只列 papers.json 里还存在的卷子名（兜底：防止历史孤儿数据）
+        valid_names = set()
+        for p in data_manager.papers:
+            name = p.get("name")
+            if name:
+                valid_names.add(name)
+
         all_questions = data_manager.questions
         paper_names = set()
         for q in all_questions:
@@ -18,7 +25,8 @@ async def list_paper_names():
             exam = data_manager.get_exam_by_question_id(qid)
             if exam:
                 name = exam.get('exam_name')
-                if name:
+                # ⭐ 双重过滤：非空 + 卷子还存在
+                if name and name in valid_names:
                     paper_names.add(name)
         return {"papers": sorted(paper_names)}
     except Exception as e:
