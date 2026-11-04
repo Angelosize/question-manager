@@ -16,8 +16,8 @@ from datetime import datetime
 import re
 import io
 from urllib.parse import quote
+from app.core.config import DATA_DIR, DEMO_MODE, DEMO_PAPER_KEYWORD
 
-from app.core.config import DATA_DIR
 
 # ---------- 尝试导入 python-docx ----------
 try:
@@ -654,6 +654,11 @@ async def import_paper_from_image_async(
     """
     异步图片导入，支持多页。保存所有页原图。
     """
+    # ⭐ 演示模式：跳过 AI，直接复制预设卷子
+    print(f"🎬🎬🎬 进入 import-image-async，DEMO_MODE = {DEMO_MODE}")
+    if DEMO_MODE:
+        return await _import_image_demo(request, db)
+
     # 兼容单页 / 多页
     raw_images = request.get("images")
     if not raw_images:
@@ -805,7 +810,146 @@ async def import_paper_from_image_async(
 
     threading.Thread(target=_run, daemon=True).start()
     return {"task_id": task_id, "message": f"任务已启动（{len(raw_images)} 页）"}
+# ============ ⭐ 演示模式：假进度 + 复制预设卷子 ============
+async def _import_image_demo(request: Dict[str, Any], db: DataManager):
+    """
+    演示专用：不调 AI，按节奏 sleep，然后复制一张预设卷子。
+    前端完全不用改，走同一个 task_id 轮询协议。
+    """
+    # 找出源卷子
+    source_paper = None
+    keyword = DEMO_PAPER_KEYWORD or ""
+    for p in db.papers:
+        if keyword and keyword in p.get("name", ""):
+            source_paper = p
+            break
+    if not source_paper and db.papers:
+        # 兜底：取最新一张
+        source_paper = db.papers[-1]
 
+    if not source_paper:
+        raise HTTPException(status_code=500, detail="演示模式：没有可用的源卷子")
+
+    print(f"🎬 [演示模式] 源卷: {source_paper.get('name')}（{len(source_paper.get('questions', []))} 题）")
+
+    task_id = uuid.uuid4().hex
+    _import_tasks[task_id] = {
+        "status": "running",
+        "stage": "vision",
+        "current": 0,
+        "total": 4,
+        "result": None,
+        "error": None,
+        "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    def _run():
+        import time as _t
+        try:
+            # ==== 阶段 1：vision（2 秒）====
+            _update_task(task_id, stage="vision", current=0, total=4)
+            print(f"   🎬 [演示] vision...")
+            for i in range(1, 5):
+                _t.sleep(0.5)
+                _update_task(task_id, stage="vision", current=i, total=4)
+
+            # ==== 阶段 2：splitting（1.5 秒）====
+            _update_task(task_id, stage="splitting", current=0, total=0)
+            print(f"   🎬 [演示] splitting...")
+            _t.sleep(1.5)
+
+            # ==== 阶段 3：recognizing（2.5 秒，逐题）====
+            q_count = len(source_paper.get("questions", []))
+            _update_task(task_id, stage="recognizing", current=0, total=q_count)
+            print(f"   🎬 [演示] recognizing {q_count} 题...")
+            for i in range(1, q_count + 1):
+                _t.sleep(0.12)
+                _update_task(task_id, stage="recognizing", current=i, total=q_count)
+
+            # ==== 阶段 4：saving（0.5 秒）====
+            _update_task(task_id, stage="saving", current=0, total=0)
+            _t.sleep(0.5)
+
+            # ==== 真正的复制逻辑 ====
+            print(f"   🎬 [演示] 复制卷子...")
+            new_questions = []
+            for q in source_paper.get("questions", []):
+                old_qid = q.get("question_id")
+                full_q = next((x for x in db.questions if x["id"] == old_qid), None)
+                if not full_q:
+                    continue
+                # 复制题目（分配新 ID）
+                new_data = {
+                    "subject": full_q.get("subject", "物理"),
+                    "type": full_q.get("type", "选择题"),
+                    "content": full_q.get("content", ""),
+                    "answer": full_q.get("answer", ""),
+                    "difficulty": full_q.get("difficulty", "中等"),
+                    "options": full_q.get("options", {}),
+                    "explanation": full_q.get("explanation", ""),
+                    "knowledge_points": full_q.get("knowledge_points", ""),
+                    "tags": full_q.get("tags", []),
+                    "source": "演示导入",
+                }
+                new_qid = db.add_question(new_data, save=False)
+
+                # 复制 exam 映射
+                old_exam = db.get_exam_by_question_id(old_qid)
+                if old_exam:
+                    exam_data = {
+                        "exam_name": f"{source_paper.get('name', '未命名')}",
+                        "year": old_exam.get("year", 2026),
+                        "number": old_exam.get("number", q.get("number", 1)),
+                        "score": old_exam.get("score", q.get("score", 3)),
+                        "source": "演示导入",
+                    }
+                    db.add_exam_mapping(new_qid, exam_data)
+
+                new_questions.append({
+                    "question_id": new_qid,
+                    "number": q.get("number", 1),
+                    "score": q.get("score", 3),
+                    "source_page": q.get("source_page"),
+                })
+
+            db.save_questions()
+
+            # 复制卷子
+            paper_data = {
+                "name": f"{source_paper.get('name', '未命名')}",
+                "subject": source_paper.get("subject", "物理"),
+                "year": source_paper.get("year", 2026),
+                "duration": source_paper.get("duration", 90),
+                "total_score": sum(q["score"] for q in new_questions),
+                "question_count": len(new_questions),
+                "questions": new_questions,
+                "page_images": source_paper.get("page_images", []),
+            }
+            new_paper_id = db.add_paper(paper_data)
+
+            print(f"   ✅ [演示] 复制完成: {len(new_questions)} 题，paper_id={new_paper_id}")
+
+            result = {
+                "success": True,
+                "paper_id": new_paper_id,
+                "paper_name": paper_data["name"],
+                "subject": paper_data["subject"],
+                "total_questions": len(new_questions),
+                "total_score": paper_data["total_score"],
+                "duration": paper_data["duration"],
+                "page_count": 4,
+                "pages_recognized": 4,
+                "message": f"成功导入卷子，共 {len(new_questions)} 道题（演示模式）",
+            }
+            _update_task(task_id, status="done", stage="done", result=result)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            _update_task(task_id, status="error", error=str(e))
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"task_id": task_id, "message": "任务已启动（演示模式）"}
 
 # ============ 查询任务状态 ============
 @router.get("/import-status/{task_id}")

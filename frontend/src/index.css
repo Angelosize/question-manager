@@ -637,3 +637,467 @@ code {
 .dark .ant-btn-primary span {
   color: #fff !important;
 }
+/* ==================== QTG 侧边栏（深色渐变） ==================== */
+.qtg-sider {
+  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%) !important;
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.15);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.qtg-sider::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Logo */
+.qtg-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 72px;
+  position: relative;
+  z-index: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.qtg-logo-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+}
+
+.qtg-logo-text {
+  overflow: hidden;
+  transition: opacity 0.3s;
+}
+
+.qtg-logo-title {
+  color: #f1f5f9;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.qtg-logo-sub {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* 菜单容器 */
+.qtg-menu-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.qtg-menu-wrapper::-webkit-scrollbar {
+  width: 0;
+}
+
+/* 菜单本体 */
+.qtg-menu {
+  background: transparent !important;
+  border-inline-end: none !important;
+}
+
+.qtg-menu .ant-menu-item-group-title {
+  color: rgba(255, 255, 255, 0.35) !important;
+  font-size: 11px !important;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 16px 20px 6px 20px !important;
+  margin-top: 4px;
+}
+
+.qtg-menu .ant-menu-item {
+  height: 42px !important;
+  line-height: 42px !important;
+  margin: 2px 12px !important;
+  width: calc(100% - 24px) !important;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.65) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.qtg-menu .ant-menu-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 20px;
+  background: linear-gradient(180deg, #60a5fa 0%, #a78bfa 100%);
+  border-radius: 0 3px 3px 0;
+  transition: transform 0.25s;
+}
+
+.qtg-menu .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+}
+
+.qtg-menu .ant-menu-item:hover::before {
+  transform: translateY(-50%) scaleY(0.5);
+}
+
+.qtg-menu .ant-menu-item-selected {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.qtg-menu .ant-menu-item-selected::before {
+  transform: translateY(-50%) scaleY(1) !important;
+}
+
+.qtg-menu .ant-menu-item .anticon {
+  font-size: 16px !important;
+  transition: transform 0.25s, color 0.25s;
+}
+
+.qtg-menu .ant-menu-item-selected .anticon {
+  color: #60a5fa !important;
+}
+
+.qtg-menu .ant-menu-item:hover .anticon {
+  transform: scale(1.15);
+}
+
+/* 折叠模式 */
+.ant-layout-sider-collapsed .qtg-menu .ant-menu-item-group-title {
+  display: none;
+}
+
+.ant-layout-sider-collapsed .qtg-menu .ant-menu-item {
+  margin: 6px 16px !important;
+  width: calc(100% - 32px) !important;
+}
+
+/* 底部 */
+.qtg-sider-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.qtg-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.qtg-username {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qtg-collapse-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.25s;
+  flex-shrink: 0;
+}
+
+.qtg-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+/* ==================== QTG Header（顶栏） ==================== */
+.qtg-header {
+  padding: 0 24px !important;
+  background: var(--bg-card) !important;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  transition: background 0.3s, border 0.3s;
+}
+
+.qtg-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.qtg-header-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.qtg-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ==================== QTG Content（内容区） ==================== */
+.qtg-content {
+  margin: 16px !important;
+  padding: 24px !important;
+  background: var(--bg-card) !important;
+  border-radius: 12px;
+  min-height: calc(100vh - 64px - 32px);
+  transition: background 0.3s;
+}
+/* ==================== 全局质感提升 ==================== */
+
+/* Content 区域：淡渐变背景（更耐看，不纯白） */
+.qtg-content {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.03) 0%, transparent 40%),
+    var(--bg-card) !important;
+  position: relative;
+}
+
+.dark .qtg-content {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.06) 0%, transparent 40%),
+    var(--bg-card) !important;
+}
+
+/* 卡片：微妙悬浮感 + hover 微浮 */
+.ant-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-color: var(--border-color);
+}
+
+.ant-card-bordered {
+  border-color: var(--border-color);
+}
+
+.ant-card:hover {
+  border-color: var(--border-color);
+}
+
+/* 表格：清爽分割线 + 表头加粗 */
+.ant-table-thead > tr > th {
+  font-weight: 600 !important;
+  font-size: 12.5px !important;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.ant-table-tbody > tr {
+  transition: background 0.2s;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--border-soft) !important;
+}
+
+.dark .ant-table-tbody > tr > td {
+  border-bottom-color: var(--border-color) !important;
+}
+
+/* 按钮：hover 有轻微抬升 */
+.ant-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-btn-primary {
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
+}
+
+.ant-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+.ant-btn-primary:active {
+  transform: translateY(0);
+}
+
+/* 输入框：focus 光晕 */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+}
+
+/* 弹窗：更大圆角 + 柔和阴影 */
+.ant-modal-content {
+  border-radius: 16px !important;
+  box-shadow:
+    0 20px 40px rgba(15, 23, 42, 0.12),
+    0 8px 16px rgba(15, 23, 42, 0.08) !important;
+}
+
+.dark .ant-modal-content {
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 8px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 下拉菜单：圆角 + 阴影 */
+.ant-dropdown-menu {
+  border-radius: 12px !important;
+  padding: 6px !important;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.1),
+    0 2px 6px rgba(15, 23, 42, 0.06) !important;
+}
+
+.dark .ant-dropdown-menu {
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ant-dropdown-menu-item {
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+}
+
+/* 标签：更精致 */
+.ant-tag {
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border: 1px solid transparent;
+}
+
+/* 页面主标题（h1/h2）统一节奏 */
+.qtg-content h1 {
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 8px !important;
+}
+
+.qtg-content h2 {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.qtg-content h3 {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: var(--text-primary);
+}
+
+/* 数字等宽对齐 */
+.ant-statistic-content-value,
+.ant-statistic-content-prefix,
+.ant-statistic-content-suffix {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+/* 滚动条：精致细条 */
+.qtg-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.qtg-content::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.qtg-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+
+/* 加载动画：更丝滑 */
+.ant-spin-dot-item {
+  background-color: #3b82f6 !important;
+}
+
+/* 空状态图标颜色 */
+.ant-empty-description {
+  color: var(--text-muted);
+}
+
+/* 分页器：更圆润 */
+.ant-pagination-item {
+  border-radius: 8px !important;
+}
+
+.ant-pagination-prev .ant-pagination-item-link,
+.ant-pagination-next .ant-pagination-item-link {
+  border-radius: 8px !important;
+}
+
+/* ==================== 页面进入动画 ==================== */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.qtg-content > * {
+  animation: page-fade-in 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}

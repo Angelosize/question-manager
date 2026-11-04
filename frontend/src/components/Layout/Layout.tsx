@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button, theme, Avatar, Dropdown, message } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, message, Tooltip } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -13,8 +13,11 @@ import {
   LoginOutlined,
   UserAddOutlined,
   AreaChartOutlined,
-  ImportOutlined,   // 导入导出图标
-  ToolOutlined,     // 小工具图标
+  ImportOutlined,
+  ToolOutlined,
+  RocketOutlined,
+  TrophyOutlined,
+  FundOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
@@ -25,46 +28,74 @@ const AppLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    token: { colorBgContainer, borderRadiusLG },
-  } = theme.useToken();
-
   const { isLoggedIn, username, logout, checkAuth } = useAuthStore();
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  // 菜单项（添加小工具和导入导出）
+  // ===== 分组菜单 =====
   const menuItems = [
-    { key: '/', icon: <HomeOutlined />, label: '首页' },
-    { key: '/questions', icon: <BookOutlined />, label: '题目管理' },
-    { key: '/quiz', icon: <FileTextOutlined />, label: '智能组卷' },
-    { key: '/papers', icon: <FileTextOutlined />, label: '卷子管理' },
-    { key: '/wrong', icon: <BarChartOutlined />, label: '错题本' },
-    { key: '/stats', icon: <BarChartOutlined />, label: '统计分析' },
-    { key: '/paper-compare', icon: <AreaChartOutlined />, label: '卷子对比' },
-    // 导入导出（如果你有独立的导入导出页面，可以保留，否则可以忽略）
-    { key: '/import-export', icon: <ImportOutlined />, label: '导入导出' },
-    // 小工具
-    { key: '/utils', icon: <ToolOutlined />, label: '小工具' },
+    {
+      type: 'group' as const,
+      label: '核心',
+      children: [
+        { key: '/', icon: <HomeOutlined />, label: '首页' },
+        { key: '/questions', icon: <BookOutlined />, label: '题目管理' },
+        { key: '/papers', icon: <FileTextOutlined />, label: '卷子管理' },
+        { key: '/quiz', icon: <RocketOutlined />, label: '智能组卷' },
+      ],
+    },
+    {
+      type: 'group' as const,
+      label: '学习',
+      children: [
+        { key: '/wrong', icon: <TrophyOutlined />, label: '错题本' },
+        { key: '/stats', icon: <FundOutlined />, label: '统计分析' },
+        { key: '/paper-compare', icon: <AreaChartOutlined />, label: '卷子对比' },
+      ],
+    },
+    {
+      type: 'group' as const,
+      label: '工具',
+      children: [
+        { key: '/import-export', icon: <ImportOutlined />, label: '导入导出' },
+        { key: '/utils', icon: <ToolOutlined />, label: '小工具' },
+      ],
+    },
   ];
+
+  // ===== 计算选中项（兼容子路径） =====
+  const allKeys = menuItems.flatMap((g) => g.children?.map((c) => c.key) || []);
+  const selectedKey = (() => {
+    const path = location.pathname;
+    if (path === '/') return '/';
+    const matched = allKeys
+      .filter((k) => k !== '/' && path.startsWith(k))
+      .sort((a, b) => b.length - a.length)[0];
+    return matched || path;
+  })();
+
+  // ===== 当前页面标题 =====
+  const currentTitle =
+    menuItems.flatMap((g) => g.children || []).find((c) => c.key === selectedKey)
+      ?.label || '全能题目管理器';
 
   const userMenuItems = [
-    ...(isLoggedIn ? [
-      { key: 'profile', icon: <UserOutlined />, label: `欢迎, ${username}` },
-      { key: 'settings', icon: <SettingOutlined />, label: '设置' },
-      { type: 'divider' as const },
-      { key: 'logout', icon: <LogoutOutlined />, label: '退出登录' }
-    ] : [
-      { key: 'login', icon: <LoginOutlined />, label: '登录' },
-      { key: 'register', icon: <UserAddOutlined />, label: '注册' }
-    ])
+    ...(isLoggedIn
+      ? [
+          { key: 'profile', icon: <UserOutlined />, label: `欢迎, ${username}` },
+          { key: 'settings', icon: <SettingOutlined />, label: '设置' },
+          { type: 'divider' as const },
+          { key: 'logout', icon: <LogoutOutlined />, label: '退出登录' },
+        ]
+      : [
+          { key: 'login', icon: <LoginOutlined />, label: '登录' },
+          { key: 'register', icon: <UserAddOutlined />, label: '注册' },
+        ]),
   ];
 
-  const handleMenuClick = ({ key }: { key: string }) => {
-    navigate(key);
-  };
+  const handleMenuClick = ({ key }: { key: string }) => navigate(key);
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     switch (key) {
@@ -90,47 +121,76 @@ const AppLayout: React.FC = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed}>
-        <div className="demo-logo-vertical" />
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          onClick={handleMenuClick}
-        />
-      </Sider>
-      <Layout>
-        <Header style={{ 
-          padding: 0, 
-          background: colorBgContainer,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingRight: 16
-        }}>
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            style={{ fontSize: '16px', width: 64, height: 64 }}
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        width={240}
+        collapsedWidth={80}
+        className="qtg-sider"
+      >
+        {/* ===== Logo 区 ===== */}
+        <div className="qtg-logo">
+          <div className="qtg-logo-badge">QTG</div>
+          {!collapsed && (
+            <div className="qtg-logo-text">
+              <div className="qtg-logo-title">全能题目管理器</div>
+              <div className="qtg-logo-sub">AI EDUCATION</div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 菜单 ===== */}
+        <div className="qtg-menu-wrapper">
+          <Menu
+            theme="dark"
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            items={menuItems}
+            onClick={handleMenuClick}
+            className="qtg-menu"
           />
-          <Dropdown
-            menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
-            placement="bottomRight"
-          >
-            <Avatar size="default" icon={<UserOutlined />} style={{ cursor: 'pointer' }} />
-          </Dropdown>
+        </div>
+
+        {/* ===== 底部：用户 + 折叠 ===== */}
+        <div className="qtg-sider-footer">
+          {!collapsed && isLoggedIn && (
+            <div className="qtg-user-info">
+              <Avatar size={26} icon={<UserOutlined />} />
+              <span className="qtg-username">{username}</span>
+            </div>
+          )}
+          <Tooltip title={collapsed ? '展开' : '收起'} placement="right">
+            <button
+              className="qtg-collapse-btn"
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </button>
+          </Tooltip>
+        </div>
+      </Sider>
+
+      <Layout>
+        <Header className="qtg-header">
+          <div className="qtg-header-left">
+            <h2 className="qtg-header-title">{currentTitle}</h2>
+          </div>
+          <div className="qtg-header-right">
+            <Dropdown
+              menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
+              placement="bottomRight"
+            >
+              <Avatar
+                size="default"
+                icon={<UserOutlined />}
+                style={{ cursor: 'pointer' }}
+              />
+            </Dropdown>
+          </div>
         </Header>
-        <Content
-          style={{
-            margin: '24px 16px',
-            padding: 24,
-            minHeight: 280,
-            background: colorBgContainer,
-            borderRadius: borderRadiusLG,
-          }}
-        >
+
+        <Content className="qtg-content">
           <Outlet />
         </Content>
       </Layout>

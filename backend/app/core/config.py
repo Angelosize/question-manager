@@ -71,3 +71,8 @@ class Settings:
     ]
     
 settings = Settings()
+# 演示模式
+DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
+DEMO_PAPER_KEYWORD = os.getenv("DEMO_PAPER_KEYWORD", "")
+print(f"🎬 [启动检查] DEMO_MODE = {DEMO_MODE}")
+print(f"🎬 [启动检查] DEMO_PAPER_KEYWORD = {DEMO_PAPER_KEYWORD}")

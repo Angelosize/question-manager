@@ -207,72 +207,20 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
   generateQuiz: async (settings: QuizSettings): Promise<QuizQuestion[]> => {
     set({ isLoading: true, error: null });
     try {
-      const allQuestions = get().questions;
-      let filteredQuestions = [...allQuestions];
+      // ⭐ 直接调用后端 API，让后端去全库抽题
+      const questions = await apiClient.generateQuiz(settings);
       
-      if (settings.subjects && settings.subjects.length > 0) {
-        filteredQuestions = filteredQuestions.filter(q => 
-          settings.subjects!.includes(q.subject)
-        );
-      }
-      
-      if (settings.types && settings.types.length > 0) {
-        filteredQuestions = filteredQuestions.filter(q =>
-          settings.types!.includes(q.type)
-        );
-      }
-      
-      const difficultyDistribution = settings.difficulty_distribution || { '基础': 30, '中等': 50, '拔高': 20 };
-      const difficultyCounts: Record<string, number> = {};
-      
-      Object.entries(difficultyDistribution).forEach(([difficulty, percentage]) => {
-        difficultyCounts[difficulty] = Math.floor((percentage / 100) * settings.count);
-      });
-      
-      const questionsByDifficulty: Record<string, Question[]> = {};
-      filteredQuestions.forEach(q => {
-        const difficulty = q.difficulty || '中等';
-        if (!questionsByDifficulty[difficulty]) {
-          questionsByDifficulty[difficulty] = [];
-        }
-        questionsByDifficulty[difficulty].push(q);
-      });
-      
-      const selectedQuestions: QuizQuestion[] = [];
-      Object.entries(difficultyCounts).forEach(([difficulty, count]) => {
-        const availableQuestions = questionsByDifficulty[difficulty] || [];
-        const selected = availableQuestions
-          .sort(() => Math.random() - 0.5)
-          .slice(0, count)
-          .map(q => ({ 
-            ...q, 
-            user_answer: undefined, 
-            is_correct: undefined, 
-            score: undefined 
-          }));
-        selectedQuestions.push(...selected);
-      });
-      
-      if (selectedQuestions.length < settings.count) {
-        const remainingCount = settings.count - selectedQuestions.length;
-        const remainingQuestions = filteredQuestions
-          .filter(q => !selectedQuestions.some(sq => sq.id === q.id))
-          .sort(() => Math.random() - 0.5)
-          .slice(0, remainingCount)
-          .map(q => ({ 
-            ...q, 
-            user_answer: undefined, 
-            is_correct: undefined, 
-            score: undefined 
-          }));
-        selectedQuestions.push(...remainingQuestions);
-      }
-      
-      const shuffledQuestions = selectedQuestions.sort(() => Math.random() - 0.5);
-      
+      // 清理一下可能存在的上次答题痕迹
+      const cleanQuestions = questions.map((q: any) => ({
+        ...q,
+        id: q.id || q.question_id,
+        user_answer: undefined,
+        is_correct: undefined,
+        score: undefined,
+      }));
+
       set({ isLoading: false });
-      return shuffledQuestions;
-      
+      return cleanQuestions;
     } catch (error: any) {
       set({ 
         error: error.message || '组卷失败',
