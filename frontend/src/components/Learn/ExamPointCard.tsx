@@ -15,7 +15,7 @@ interface Props {
 }
 
 const ExamPointCard: React.FC<Props> = ({ examPoint, wrongCount }) => {
-  const [variantIdx, setVariantIdx] = useState(-1);   // -1 = 显示原版
+  const [variantIdx, setVariantIdx] = useState(-1);
 
   const variants = examPoint.variants || [];
   const currentText = variantIdx < 0 ? examPoint.title : variants[variantIdx];
@@ -39,7 +39,7 @@ const ExamPointCard: React.FC<Props> = ({ examPoint, wrongCount }) => {
         style={{
           fontSize: 20,
           fontWeight: 700,
-          color: '#1a1a1a',
+          color: 'var(--text-primary)',
           marginBottom: 8,
           lineHeight: 1.5,
         }}
@@ -71,15 +71,15 @@ const ExamPointCard: React.FC<Props> = ({ examPoint, wrongCount }) => {
           style={{
             marginTop: 12,
             padding: '10px 14px',
-            background: '#f6ffed',
-            border: '1px solid #b7eb8f',
+            background: 'rgba(82, 196, 26, 0.1)',
+            border: '1px solid rgba(82, 196, 26, 0.3)',
             borderRadius: 6,
             fontSize: 14,
-            color: '#389e0d',
+            color: 'var(--text-primary)',
           }}
         >
           💡 换个说法：{currentText}
-          <span style={{ color: '#999', marginLeft: 8, fontSize: 12 }}>
+          <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: 12 }}>
             （{variantIdx + 1} / {variants.length}）
           </span>
         </div>

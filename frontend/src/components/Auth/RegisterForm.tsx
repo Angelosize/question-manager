@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { apiClient } from '../../api/client';
 
 interface RegisterData {
   username: string;
@@ -27,33 +28,21 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: values.username,
-          email: values.email,
-          full_name: values.full_name,
-          password: values.password
-        })
+      await apiClient.register({
+        username: values.username,
+        email: values.email,
+        full_name: values.full_name,
+        password: values.password,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('注册成功:', data);
-        message.success('注册成功！');
-        
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          navigate('/login');
-        }
+      message.success('注册成功！');
+      if (onSuccess) {
+        onSuccess();
       } else {
-        const error = await response.json();
-        message.error(error.detail || '注册失败');
+        navigate('/login');
       }
-    } catch (error) {
-      message.error('网络错误，请重试');
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail;
+      message.error(typeof detail === 'string' ? detail : '注册失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -61,14 +50,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
   return (
     <Card title="用户注册" style={{ maxWidth: 400, margin: '0 auto' }}>
-      <Form
-        name="register"
-        onFinish={onFinish}
-        layout="vertical"
-      >
+      <Form name="register" onFinish={onFinish} layout="vertical">
         <Form.Item
           name="username"
-          rules={[{ required: true, message: '请输入用户名' }]}
+          rules={[
+            { required: true, message: '请输入用户名' },
+            { min: 3, max: 32, message: '用户名长度 3-32 位' },
+          ]}
         >
           <Input prefix={<UserOutlined />} placeholder="用户名" size="large" />
         </Form.Item>
@@ -77,21 +65,22 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           name="email"
           rules={[
             { required: true, message: '请输入邮箱' },
-            { type: 'email', message: '邮箱格式不正确' }
+            { type: 'email', message: '邮箱格式不正确' },
           ]}
         >
           <Input prefix={<MailOutlined />} placeholder="邮箱" size="large" />
         </Form.Item>
 
-        <Form.Item
-          name="full_name"
-        >
+        <Form.Item name="full_name">
           <Input prefix={<UserOutlined />} placeholder="姓名（可选）" size="large" />
         </Form.Item>
 
         <Form.Item
           name="password"
-          rules={[{ required: true, message: '请输入密码' }]}
+          rules={[
+            { required: true, message: '请输入密码' },
+            { min: 6, message: '密码至少 6 位' },
+          ]}
         >
           <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
         </Form.Item>

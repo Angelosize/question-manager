@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Layout, Menu, Avatar, Dropdown, message, Tooltip } from 'antd';
 import {
   MenuFoldOutlined,
@@ -6,12 +6,9 @@ import {
   HomeOutlined,
   BookOutlined,
   FileTextOutlined,
-  BarChartOutlined,
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
-  LoginOutlined,
-  UserAddOutlined,
   AreaChartOutlined,
   ImportOutlined,
   ToolOutlined,
@@ -28,11 +25,8 @@ const AppLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoggedIn, username, logout, checkAuth } = useAuthStore();
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
 
   // ===== 分组菜单 =====
   const menuItems = [
@@ -82,17 +76,15 @@ const AppLayout: React.FC = () => {
       ?.label || '全能题目管理器';
 
   const userMenuItems = [
-    ...(isLoggedIn
-      ? [
-          { key: 'profile', icon: <UserOutlined />, label: `欢迎, ${username}` },
-          { key: 'settings', icon: <SettingOutlined />, label: '设置' },
-          { type: 'divider' as const },
-          { key: 'logout', icon: <LogoutOutlined />, label: '退出登录' },
-        ]
-      : [
-          { key: 'login', icon: <LoginOutlined />, label: '登录' },
-          { key: 'register', icon: <UserAddOutlined />, label: '注册' },
-        ]),
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: user ? `欢迎, ${user.username}` : '未登录',
+      disabled: true,
+    },
+    { key: 'settings', icon: <SettingOutlined />, label: '设置' },
+    { type: 'divider' as const },
+    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录' },
   ];
 
   const handleMenuClick = ({ key }: { key: string }) => navigate(key);
@@ -102,16 +94,7 @@ const AppLayout: React.FC = () => {
       case 'logout':
         logout();
         message.success('已退出登录');
-        navigate('/');
-        break;
-      case 'login':
-        navigate('/login');
-        break;
-      case 'register':
-        navigate('/register');
-        break;
-      case 'profile':
-        message.info('个人资料功能开发中');
+        navigate('/login', { replace: true });
         break;
       case 'settings':
         message.info('设置功能开发中');
@@ -154,10 +137,10 @@ const AppLayout: React.FC = () => {
 
         {/* ===== 底部：用户 + 折叠 ===== */}
         <div className="qtg-sider-footer">
-          {!collapsed && isLoggedIn && (
+          {!collapsed && user && (
             <div className="qtg-user-info">
               <Avatar size={26} icon={<UserOutlined />} />
-              <span className="qtg-username">{username}</span>
+              <span className="qtg-username">{user.username}</span>
             </div>
           )}
           <Tooltip title={collapsed ? '展开' : '收起'} placement="right">

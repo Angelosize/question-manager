@@ -47,19 +47,17 @@ const QuestionCard: React.FC<Props> = ({ question, wrongCount }) => {
       style={{ marginBottom: 24 }}
       styles={{ header: { fontSize: 16, fontWeight: 600 } }}
     >
-      {/* 元信息 */}
       <Space size="small" wrap style={{ marginBottom: 12 }}>
         {question.subject && <Tag color="blue">{question.subject}</Tag>}
         {question.type && <Tag color="green">{question.type}</Tag>}
         {question.difficulty && <Tag color="orange">{question.difficulty}</Tag>}
       </Space>
 
-      {/* 题干 */}
       <div
         style={{
           fontSize: 16,
           lineHeight: 1.9,
-          color: '#1a1a1a',
+          color: 'var(--text-primary)',
           whiteSpace: 'pre-wrap',
           marginBottom: 16,
         }}
@@ -67,11 +65,10 @@ const QuestionCard: React.FC<Props> = ({ question, wrongCount }) => {
         {renderWithLatex(question.content)}
       </div>
 
-      {/* 选项 */}
       {hasOptions && (
         <div
           style={{
-            background: '#fafafa',
+            background: 'var(--border-soft)',
             borderRadius: 6,
             padding: '12px 16px',
             marginBottom: 16,
@@ -82,14 +79,13 @@ const QuestionCard: React.FC<Props> = ({ question, wrongCount }) => {
               key={k}
               style={{ fontSize: 15, lineHeight: 2, display: 'flex', gap: 8 }}
             >
-              <strong style={{ minWidth: 20 }}>{k}.</strong>
-              <span>{renderWithLatex(v)}</span>
+              <strong style={{ minWidth: 20, color: 'var(--text-primary)' }}>{k}.</strong>
+              <span style={{ color: 'var(--text-secondary)' }}>{renderWithLatex(v)}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* 答案（可折叠） */}
       {question.answer && (
         <div>
           <Button
@@ -104,11 +100,11 @@ const QuestionCard: React.FC<Props> = ({ question, wrongCount }) => {
               style={{
                 marginTop: 10,
                 padding: '10px 14px',
-                background: '#f6ffed',
-                border: '1px solid #b7eb8f',
+                background: 'rgba(82, 196, 26, 0.1)',
+                border: '1px solid rgba(82, 196, 26, 0.3)',
                 borderRadius: 6,
                 fontSize: 15,
-                color: '#389e0d',
+                color: 'var(--text-primary)',
                 lineHeight: 1.7,
               }}
             >

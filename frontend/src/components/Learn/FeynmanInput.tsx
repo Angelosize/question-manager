@@ -51,7 +51,7 @@ const FeynmanInput: React.FC<Props> = ({ questionId, onVerdict }) => {
       style={{ marginBottom: 24 }}
       styles={{ header: { fontSize: 16, fontWeight: 600 } }}
     >
-      <div style={{ fontSize: 14, color: '#666', marginBottom: 12 }}>
+      <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12 }}>
         假装我是你同桌，你怎么给我讲这道题？
       </div>
 
@@ -93,7 +93,7 @@ const FeynmanInput: React.FC<Props> = ({ questionId, onVerdict }) => {
             </Space>
           }
           description={
-            <div style={{ lineHeight: 1.7 }}>
+            <div style={{ lineHeight: 1.7, color: 'var(--text-primary)' }}>
               <div>{result.feedback}</div>
               {result.missing && result.missing.length > 0 && (
                 <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>

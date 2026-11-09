@@ -48,3 +48,6 @@ Thumbs.db
 # 临时文件
 tmp/
 temp/
+# Python
+__pycache__/
+*.py[cod]

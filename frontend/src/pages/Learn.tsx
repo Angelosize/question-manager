@@ -1,33 +1,21 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Spin, Result, Button, message } from 'antd';
-import { RedoOutlined } from '@ant-design/icons';
+import { Spin, Result, Button, message, FloatButton, Modal, Input } from 'antd';
+import { RedoOutlined, QuestionCircleOutlined, SendOutlined } from '@ant-design/icons';
 import LearnHeader from '../components/Learn/LearnHeader';
 import QuestionCard from '../components/Learn/QuestionCard';
 import ExamPointCard from '../components/Learn/ExamPointCard';
 import StepCard from '../components/Learn/StepCard';
 import FeynmanInput from '../components/Learn/FeynmanInput';
+import PrerequisitesCard from '../components/Learn/PrerequisitesCard';
+import SimilarQuestionsCard from '../components/Learn/SimilarQuestionsCard';
 import { apiClient } from '../api/client';
 
 interface LearningData {
-  exam_point: {
-    title: string;
-    chapter?: string;
-    difficulty?: string;
-    variants?: string[];
-  };
+  exam_point: any;
   prerequisites?: any[];
-  steps: Array<{
-    index: number;
-    title: string;
-    content: string;
-    hint?: string;
-    variants?: string[];
-  }>;
-  feynman_prep?: {
-    key_points?: string[];
-    common_mistakes?: string[];
-  };
+  steps: any[];
+  feynman_prep?: any;
 }
 
 interface QuestionInfo {
@@ -40,6 +28,28 @@ interface QuestionInfo {
   answer?: string;
 }
 
+// ⭐ 学习相关请求集中封装：将来上 Vercel+Render 改 baseURL 只改这里
+const learnApi = {
+  getSimilar: async (qid: string) => {
+    const res = await fetch(`/api/learn/similar/${qid}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+  stuck: async (payload: {
+    question_id: string;
+    step_content: string;
+    confusion: string;
+  }) => {
+    const res = await fetch('/api/learn/stuck', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+};
+
 const Learn: React.FC = () => {
   const { questionId } = useParams<{ questionId: string }>();
   const navigate = useNavigate();
@@ -47,13 +57,21 @@ const Learn: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [preparing, setPreparing] = useState(false);
   const [data, setData] = useState<LearningData | null>(null);
-  const [question, setQuestion] = useState<QuestionInfo | null>(null);   // ⭐ 新增
+  const [question, setQuestion] = useState<QuestionInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wrongCount, setWrongCount] = useState<number | undefined>(undefined);
 
-  const [currentStep, setCurrentStep] = useState(1);
   const [understoodSteps, setUnderstoodSteps] = useState<Set<number>>(new Set());
   const [mastery, setMastery] = useState<'learning' | 'mastered'>('learning');
+
+  // 同类题
+  const [similarQuestions, setSimilarQuestions] = useState<any[]>([]);
+
+  // 卡住了 Modal
+  const [stuckVisible, setStuckVisible] = useState(false);
+  const [stuckText, setStuckText] = useState('');
+  const [stuckAnswer, setStuckAnswer] = useState('');
+  const [stuckLoading, setStuckLoading] = useState(false);
 
   const pollRef = useRef<number | null>(null);
   const loadedRef = useRef<string | null>(null);
@@ -61,22 +79,19 @@ const Learn: React.FC = () => {
   useEffect(() => {
     if (!questionId) return;
 
-    // 无条件清理旧轮询
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
 
-    // 切题时重置状态
     setData(null);
     setQuestion(null);
     setPreparing(false);
     setError(null);
-    setCurrentStep(1);
     setUnderstoodSteps(new Set());
     setMastery('learning');
+    setSimilarQuestions([]);
 
-    // 防重复加载
     if (loadedRef.current === questionId) return;
     loadedRef.current = questionId;
 
@@ -95,28 +110,25 @@ const Learn: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    // ⭐ 并行：拉题目详情（用于显示原题）
     apiClient
       .getQuestion(qid)
-      .then((q) => {
-        setQuestion(q as QuestionInfo);
-      })
-      .catch((e) => {
-        console.warn('拉取题目失败', e);
-      });
+      .then((q) => setQuestion(q as QuestionInfo))
+      .catch((e) => console.warn('拉取题目失败', e));
 
-    // ⭐ 拉错题次数（可选）
     apiClient
       .getWrongQuestions()
       .then((list) => {
         const wq = (list || []).find((w: any) => w.question_id === qid);
         if (wq?.wrong_count) setWrongCount(wq.wrong_count);
       })
-      .catch(() => {
-        // 忽略
-      });
+      .catch(() => {});
 
-    // 读缓存
+    // 拉取同类题（失败不影响主流程）
+    learnApi
+      .getSimilar(qid)
+      .then((res) => setSimilarQuestions(res.data || []))
+      .catch((e) => console.warn('拉取同类题失败', e));
+
     try {
       const res = await apiClient.getLearningCache(qid);
       if (res.cached && res.data) {
@@ -128,7 +140,6 @@ const Learn: React.FC = () => {
       console.warn('读缓存失败', e);
     }
 
-    // 没缓存 → 触发预热 + 轮询
     setPreparing(true);
     try {
       await apiClient.warmupLearning(qid);
@@ -161,9 +172,8 @@ const Learn: React.FC = () => {
           setLoading(false);
           return;
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
+
       if (attempts >= maxAttempts) {
         if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = null;
@@ -179,46 +189,66 @@ const Learn: React.FC = () => {
     next.add(idx);
     setUnderstoodSteps(next);
 
-    if (data && idx < data.steps.length) {
-      setCurrentStep(idx + 1);
-    } else if (data && idx === data.steps.length) {
+    if (data && next.size === data.steps.length) {
       setMastery('mastered');
       apiClient.updateLearningRecord(questionId!, { status: 'mastered' }).catch(() => {});
+      message.success('太棒了！你已经学完了所有步骤');
     }
   };
 
-  const handlePrev = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  // ⭐ 当前正在学的步骤（第一个没打勾的；如果全打勾了取最后一步）
+  const getCurrentStep = () => {
+    if (!data?.steps || data.steps.length === 0) return null;
+    const firstUnlearned = data.steps.find((s: any) => !understoodSteps.has(s.index));
+    return firstUnlearned || data.steps[data.steps.length - 1];
   };
 
-  const handleNext = () => {
-    if (data && currentStep < data.steps.length) {
-      setCurrentStep(currentStep + 1);
+  const handleStuckSubmit = async () => {
+    if (!stuckText.trim()) return;
+    const step = getCurrentStep();
+    if (!step) {
+      message.warning('还没有可参考的步骤，请稍后重试');
+      return;
+    }
+
+    // ⭐ 传完整上下文：第X步、标题、正文、提示
+    const stepContent = [
+      `第 ${step.index} 步「${step.title}」`,
+      step.content,
+      step.hint ? `（提示：${step.hint}）` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    setStuckLoading(true);
+    try {
+      const res = await learnApi.stuck({
+        question_id: questionId!,
+        step_content: stepContent,
+        confusion: stuckText.trim(),
+      });
+      setStuckAnswer(res.explanation || '');
+    } catch (e: any) {
+      message.error(e?.message || '请求失败，请重试');
+    } finally {
+      setStuckLoading(false);
     }
   };
 
-  const handleStuck = () => {
-    const el = document.getElementById(`step-${currentStep}`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    message.info('往下看，AI 已经换了一种讲法');
-  };
+  const currentStepForModal = getCurrentStep();
 
   if (loading || preparing) {
     return (
       <div className="max-w-3xl mx-auto p-4">
-        {/* ⭐ 准备中就先把原题显示出来，用户不用干等 */}
         {question && (
           <div style={{ marginTop: 16 }}>
             <QuestionCard question={question} wrongCount={wrongCount} />
           </div>
         )}
-
         <div className="flex justify-center items-center h-64 flex-col gap-4">
           <Spin size="large" />
           <div style={{ color: '#1890ff', fontSize: 14 }}>
-            {preparing
-              ? '正在为你准备学习内容……（首次约需 30-60 秒）'
-              : '加载中……'}
+            {preparing ? '正在为你准备学习内容……（首次约需 30-60 秒）' : '加载中……'}
           </div>
         </div>
       </div>
@@ -228,11 +258,6 @@ const Learn: React.FC = () => {
   if (error || !data) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        {question && (
-          <div style={{ marginBottom: 24 }}>
-            <QuestionCard question={question} wrongCount={wrongCount} />
-          </div>
-        )}
         <Result
           status="warning"
           title="学习内容加载失败"
@@ -258,15 +283,14 @@ const Learn: React.FC = () => {
   const totalSteps = steps.length;
 
   return (
-    <div className="max-w-3xl mx-auto p-4 pb-24">
+    <div className="max-w-3xl mx-auto p-4 pb-24 relative">
       <LearnHeader
-        currentStep={currentStep}
+        understoodCount={understoodSteps.size}
         totalSteps={totalSteps}
         mastery={mastery}
         onBack={() => navigate(-1)}
       />
 
-      {/* ⭐ 原题卡片 */}
       {question && (
         <div style={{ marginTop: 24 }}>
           <QuestionCard question={question} wrongCount={wrongCount} />
@@ -274,6 +298,8 @@ const Learn: React.FC = () => {
       )}
 
       <ExamPointCard examPoint={data.exam_point} wrongCount={wrongCount} />
+
+      <PrerequisitesCard prerequisites={data.prerequisites || []} />
 
       <div style={{ marginBottom: 12 }}>
         <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>一步步来</h3>
@@ -283,54 +309,91 @@ const Learn: React.FC = () => {
               step={s}
               understood={understoodSteps.has(s.index)}
               onUnderstood={() => handleUnderstood(s.index)}
-              active={currentStep === s.index}
+              active={!understoodSteps.has(s.index)}
             />
           </div>
         ))}
       </div>
+
+      <SimilarQuestionsCard
+        questions={similarQuestions}
+        onGoTo={(id) => navigate(`/learn/${id}`)}
+      />
 
       <FeynmanInput
         questionId={questionId!}
         onVerdict={(verdict) => {
           if (verdict.includes('讲清楚')) {
             setMastery('mastered');
-            apiClient
-              .updateLearningRecord(questionId!, { status: 'mastered' })
-              .catch(() => {});
+            apiClient.updateLearningRecord(questionId!, { status: 'mastered' }).catch(() => {});
           }
         }}
       />
 
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: '#fff',
-          borderTop: '1px solid #f0f0f0',
-          padding: '12px 24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          zIndex: 100,
-          boxShadow: '0 -2px 8px rgba(0,0,0,0.04)',
+      <FloatButton
+        icon={<QuestionCircleOutlined />}
+        type="primary"
+        style={{ right: 24, bottom: 24, width: 56, height: 56 }}
+        tooltip="我卡住了"
+        onClick={() => {
+          setStuckVisible(true);
+          setStuckAnswer('');
+          setStuckText('');
         }}
+      />
+
+      <Modal
+        title={
+          currentStepForModal
+            ? `我卡在第 ${currentStepForModal.index} 步了`
+            : '我卡住了，能帮帮我吗？'
+        }
+        open={stuckVisible}
+        onCancel={() => setStuckVisible(false)}
+        footer={null}
       >
-        <Button onClick={handlePrev} disabled={currentStep <= 1}>
-          上一步
-        </Button>
-        <Button type="dashed" onClick={handleStuck}>
-          我卡住了
-        </Button>
-        <Button
-          type="primary"
-          onClick={handleNext}
-          disabled={!data || currentStep >= totalSteps}
-        >
-          下一步
-        </Button>
-      </div>
+        <div className="space-y-4 mt-4">
+          {!stuckAnswer ? (
+            <>
+              <div className="text-sm text-[var(--text-secondary)]">
+                告诉 AI 你具体哪里没想通，它会针对
+                {currentStepForModal ? `第 ${currentStepForModal.index} 步` : '当前步骤'}
+                用最通俗的话再讲一遍。
+              </div>
+              <Input.TextArea
+                rows={4}
+                value={stuckText}
+                onChange={(e) => setStuckText(e.target.value)}
+                placeholder="例如：我不懂为什么速度比算出来是 3:2，怎么列的式子？"
+              />
+              <Button
+                type="primary"
+                block
+                loading={stuckLoading}
+                onClick={handleStuckSubmit}
+                icon={<SendOutlined />}
+                disabled={!stuckText.trim()}
+              >
+                向 AI 求助
+              </Button>
+            </>
+          ) : (
+            <div>
+              <div className="p-4 bg-[var(--border-soft)] rounded-lg text-[var(--text-primary)] text-sm leading-relaxed whitespace-pre-wrap">
+                {stuckAnswer}
+              </div>
+              <Button
+                type="primary"
+                block
+                className="mt-4"
+                onClick={() => setStuckAnswer('')}
+              >
+                我还是没懂，重新描述
+              </Button>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -1374,3 +1374,31 @@ class AIAssistant:
         except Exception as e:
             print(f"❌ 试卷识别失败: {e}")
             return None
+    # ===== 学生学习卡住时，提供极简通俗的换讲法 =====
+    def generate_stuck_explanation(self, question_content: str, step_content: str, user_confusion: str) -> Optional[str]:
+        if not self.is_available:
+            return None
+
+        prompt = f"""学生在做这道题时卡住了，请用最通俗、最生活化的比喻，帮他疏通思路。
+        
+【题目】
+{question_content}
+
+【学生正在学习的步骤】
+{step_content}
+
+【学生的困惑】
+{user_confusion}
+
+【要求】
+1. 不要直接给答案。
+2. 用极其通俗的大白话，或者生活中的小例子来解释这个步骤。
+3. 字数在 100 字左右，分点说明。
+4. 直接输出纯文本，不要任何 markdown 代码块。
+"""
+        try:
+            result = self.client.generate(prompt, timeout=60, max_tokens=500)
+            return result
+        except Exception as e:
+            print(f"生成换讲法失败: {e}")
+            return None

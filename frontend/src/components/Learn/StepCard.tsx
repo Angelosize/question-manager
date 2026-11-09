@@ -32,9 +32,10 @@ const StepCard: React.FC<Props> = ({ step, understood, onUnderstood, active }) =
     <Card
       style={{
         marginBottom: 16,
-        opacity: understood ? 0.55 : 1,
-        borderLeft: active ? '4px solid #1890ff' : '4px solid #f0f0f0',
+        opacity: understood ? 0.6 : 1,
+        borderLeft: active ? '4px solid #1890ff' : '4px solid var(--border-color)',
         transition: 'all 0.3s',
+        background: 'var(--bg-card)',
       }}
       styles={{ body: { padding: 20 } }}
     >
@@ -43,7 +44,7 @@ const StepCard: React.FC<Props> = ({ step, understood, onUnderstood, active }) =
           fontSize: 16,
           fontWeight: 600,
           marginBottom: 12,
-          color: understood ? '#52c41a' : '#1a1a1a',
+          color: understood ? '#52c41a' : 'var(--text-primary)',
         }}
       >
         {understood && <CheckOutlined style={{ marginRight: 8 }} />}
@@ -54,7 +55,7 @@ const StepCard: React.FC<Props> = ({ step, understood, onUnderstood, active }) =
         style={{
           fontSize: 15,
           lineHeight: 1.8,
-          color: '#333',
+          color: 'var(--text-secondary)',
           whiteSpace: 'pre-wrap',
           marginBottom: 12,
         }}
@@ -65,12 +66,12 @@ const StepCard: React.FC<Props> = ({ step, understood, onUnderstood, active }) =
       {step.hint && (
         <div
           style={{
-            background: '#fffbe6',
-            border: '1px solid #ffe58f',
+            background: 'rgba(250, 173, 20, 0.1)',
+            border: '1px solid rgba(250, 173, 20, 0.3)',
             borderRadius: 6,
             padding: '8px 12px',
             fontSize: 13,
-            color: '#874d00',
+            color: 'var(--text-primary)',
             marginBottom: 12,
           }}
         >
@@ -84,12 +85,12 @@ const StepCard: React.FC<Props> = ({ step, understood, onUnderstood, active }) =
           style={{
             marginTop: 10,
             padding: '10px 14px',
-            background: '#f0f7ff',
-            border: '1px solid #91d5ff',
+            background: 'rgba(24, 144, 255, 0.1)',
+            border: '1px solid rgba(24, 144, 255, 0.3)',
             borderRadius: 6,
             fontSize: 14,
             lineHeight: 1.7,
-            color: '#003a8c',
+            color: 'var(--text-primary)',
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
@@ -104,11 +105,11 @@ const StepCard: React.FC<Props> = ({ step, understood, onUnderstood, active }) =
           style={{
             marginTop: 10,
             fontSize: 13,
-            color: '#999',
+            color: 'var(--text-muted)',
             fontStyle: 'italic',
           }}
         >
-          💭 已经换了 {variants.length} 种说法了，要不要先看下一步，或者点底部的"我卡住了"？
+          💭 已经换了 {variants.length} 种说法了，要不要先看下一步，或者点击右下角的【?】？
         </div>
       )}
 

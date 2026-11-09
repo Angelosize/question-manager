@@ -1,48 +1,39 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface AuthUser {
+  id: string;
+  username: string;
+  email: string;
+  full_name?: string;
+  role: string;
+}
+
 interface AuthState {
   isLoggedIn: boolean;
-  username: string | null;
   token: string | null;
-  login: (username: string, token: string) => void;
+  user: AuthUser | null;
+  login: (token: string, user: AuthUser) => void;
   logout: () => void;
-  checkAuth: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       isLoggedIn: false,
-      username: null,
       token: null,
-      
-      login: (username: string, token: string) => {
-        set({ isLoggedIn: true, username, token });
-        localStorage.setItem('access_token', token);
-        localStorage.setItem('username', username);
+      user: null,
+
+      login: (token, user) => {
+        localStorage.setItem('access_token', token); // 给 axios 拦截器用
+        set({ isLoggedIn: true, token, user });
       },
-      
+
       logout: () => {
-        set({ isLoggedIn: false, username: null, token: null });
         localStorage.removeItem('access_token');
-        localStorage.removeItem('username');
+        set({ isLoggedIn: false, token: null, user: null });
       },
-      
-      checkAuth: () => {
-        const token = localStorage.getItem('access_token');
-        const username = localStorage.getItem('username');
-        const isLoggedIn = !!token && !!username;
-        
-        if (isLoggedIn && !get().isLoggedIn) {
-          set({ isLoggedIn: true, username, token });
-        }
-        
-        return isLoggedIn;
-      }
     }),
-    {
-      name: 'auth-storage'
-    }
+    { name: 'auth-storage' }
   )
 );

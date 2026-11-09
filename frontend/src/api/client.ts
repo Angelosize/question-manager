@@ -1,5 +1,16 @@
 import axios from 'axios';
-import { Question, QuestionCreate, QuestionUpdate, QuestionListResponse, FilterParams, QuizSettings, QuizResponse, QuizAnswer, PaperCompareData } from '../types';
+import {
+  Question,
+  QuestionCreate,
+  QuestionUpdate,
+  QuestionListResponse,
+  FilterParams,
+  QuizSettings,
+  QuizResponse,
+  QuizAnswer,
+  PaperCompareData,
+} from '../types';
+import { useAuthStore, AuthUser } from '../store/authStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -11,70 +22,89 @@ class ApiClient {
       baseURL: API_BASE_URL,
       timeout: 1000000,
     });
+
+    // ⭐ 请求拦截器：自动带上 token
+    this.client.interceptors.request.use((config) => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers = config.headers || {};
+        (config.headers as any).Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+
+    // ⭐ 响应拦截器：401 → 清登录态跳 /login（登录/注册接口自己处理错误，不踢）
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          const url: string = error.config?.url || '';
+          if (!url.includes('/api/auth/login') && !url.includes('/api/auth/register')) {
+            useAuthStore.getState().logout();
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
   }
-  
+
+  // ========== 认证 ==========
+  async login(username: string, password: string): Promise<{ access_token: string; user: AuthUser }> {
+    const form = new URLSearchParams();
+    form.append('username', username);
+    form.append('password', password);
+    const res = await this.client.post('/api/auth/login', form, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+    return res.data;
+  }
+
+  async register(data: {
+    username: string;
+    email: string;
+    full_name?: string;
+    password: string;
+  }): Promise<AuthUser> {
+    const res = await this.client.post('/api/auth/register', data);
+    return res.data;
+  }
+
+  async getMe(): Promise<AuthUser> {
+    const res = await this.client.get('/api/auth/me');
+    return res.data;
+  }
+
+  // ========== 以下原方法全部保留 ==========
   async getQuestions(params?: FilterParams): Promise<QuestionListResponse> {
-    try {
-      const response = await this.client.get('/api/questions/', { params });
-      
-      const backendData = response.data;
-      
-      return {
-        items: backendData.items || [],
-        total: backendData.total || 0
-      };
-      
-    } catch (error) {
-      console.error('获取题目列表失败:', error);
-      throw new Error('获取题目失败');
-    }
+    const response = await this.client.get('/api/questions/', { params });
+    const backendData = response.data;
+    return {
+      items: backendData.items || [],
+      total: backendData.total || 0,
+    };
   }
 
   async getQuestion(id: string): Promise<Question> {
-    try {
-      const response = await this.client.get(`/api/questions/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('获取题目失败:', error);
-      throw new Error('获取题目失败');
-    }
+    const response = await this.client.get(`/api/questions/${id}`);
+    return response.data;
   }
 
   async createQuestion(question: QuestionCreate): Promise<{ id: string }> {
     try {
       const response = await this.client.post('/api/questions/', question);
-      
-      console.log('📦 后端响应:', response.data);
-      
       const backendData = response.data;
-      
-      if (backendData.id) {
-        return { id: backendData.id };
-      }
-      
-      if (backendData.code === 200 && backendData.data) {
-        return { id: backendData.data };
-      }
-      
-      if (typeof backendData === 'string') {
-        return { id: backendData };
-      }
-      
+      if (backendData.id) return { id: backendData.id };
+      if (backendData.code === 200 && backendData.data) return { id: backendData.data };
+      if (typeof backendData === 'string') return { id: backendData };
       throw new Error(backendData.message || '创建题目失败');
-      
     } catch (error: any) {
       console.error('创建题目失败:', error);
-      
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      if (error.message) {
-        throw new Error(error.message);
-      }
-      
+      if (error.response?.data?.detail) throw new Error(error.response.data.detail);
+      if (error.response?.data?.message) throw new Error(error.response.data.message);
+      if (error.message) throw new Error(error.message);
       throw new Error('创建题目失败');
     }
   }
@@ -82,20 +112,12 @@ class ApiClient {
   async updateQuestion(id: string, question: QuestionUpdate): Promise<void> {
     try {
       const response = await this.client.put(`/api/questions/${id}`, question);
-      
       const backendData = response.data;
-      
-      if (backendData.message || backendData.code === 200) {
-        return;
-      }
-      
+      if (backendData.message || backendData.code === 200) return;
       throw new Error(backendData.message || '更新题目失败');
-      
     } catch (error: any) {
       console.error('更新题目失败:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
+      if (error.response?.data?.detail) throw new Error(error.response.data.detail);
       throw new Error('更新题目失败');
     }
   }
@@ -103,78 +125,52 @@ class ApiClient {
   async deleteQuestion(id: string): Promise<void> {
     try {
       const response = await this.client.delete(`/api/questions/${id}`);
-      
       const backendData = response.data;
-      
-      if (backendData.message || backendData.code === 200) {
-        return;
-      }
-      
+      if (backendData.message || backendData.code === 200) return;
       throw new Error(backendData.message || '删除题目失败');
-      
     } catch (error: any) {
       console.error('删除题目失败:', error);
       if (error.response?.status === 409) {
         const detail = error.response?.data?.detail || '题目被其他数据引用，无法删除';
         throw new Error(detail);
       }
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
+      if (error.response?.data?.detail) throw new Error(error.response.data.detail);
       throw new Error('删除题目失败');
     }
   }
 
-  async batchDeleteQuestions(ids: string[]): Promise<{ deleted_count: number, conflicts?: Record<string, string> }> {
+  async batchDeleteQuestions(ids: string[]): Promise<{ deleted_count: number; conflicts?: Record<string, string> }> {
     try {
       const response = await this.client.post('/api/questions/batch-delete', ids);
-      
       const backendData = response.data;
-      
       if (backendData.code === 200) {
         const data = backendData.data || {};
         return {
           deleted_count: data.deleted_count || ids.length,
-          conflicts: data.conflicts || {}
+          conflicts: data.conflicts || {},
         };
-      } else {
-        throw new Error(backendData.message || '批量删除失败');
       }
-      
+      throw new Error(backendData.message || '批量删除失败');
     } catch (error: any) {
       console.error('批量删除失败:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
+      if (error.response?.data?.detail) throw new Error(error.response.data.detail);
       throw new Error('批量删除失败');
     }
   }
 
   async generateQuiz(settings: QuizSettings): Promise<any> {
-    try {
-      const response = await this.client.post('/api/quiz/generate', settings);
-      return response.data;
-    } catch (error) {
-      console.error('生成试卷失败:', error);
-      throw new Error('生成试卷失败');
-    }
+    const response = await this.client.post('/api/quiz/generate', settings);
+    return response.data;
   }
 
   async submitQuiz(answers: QuizAnswer[]): Promise<QuizResponse> {
     try {
-      const response = await this.client.post('/api/quiz/submit', { answers }, {
-        timeout: 180000,
-      });
+      const response = await this.client.post('/api/quiz/submit', { answers }, { timeout: 180000 });
       return response.data;
     } catch (error: any) {
-      console.error('提交试卷失败:', error);
       const detail = error.response?.data?.detail;
-      if (typeof detail === 'string') {
-        throw new Error(detail);
-      }
-      if (error.code === 'ECONNABORTED') {
-        throw new Error('AI 批改超时，请稍后重试');
-      }
+      if (typeof detail === 'string') throw new Error(detail);
+      if (error.code === 'ECONNABORTED') throw new Error('AI 批改超时，请稍后重试');
       throw new Error(error.message || '提交试卷失败');
     }
   }
@@ -194,67 +190,32 @@ class ApiClient {
     return response.data;
   }
 
-  // ========== 错题本 API ==========
-  async getWrongQuestions(params?: {
-    mastered?: boolean;
-    subject?: string;
-    sort_by?: string;
-  }): Promise<any[]> {
-    try {
-      const response = await this.client.get('/api/wrong/', { params });
-      return response.data;
-    } catch (error) {
-      console.error('获取错题本失败:', error);
-      throw new Error('获取错题本失败');
-    }
+  async getWrongQuestions(params?: { mastered?: boolean; subject?: string; sort_by?: string }): Promise<any[]> {
+    const response = await this.client.get('/api/wrong/', { params });
+    return response.data;
   }
 
   async markWrongMastered(questionId: string): Promise<void> {
-    try {
-      await this.client.post(`/api/wrong/${questionId}/master`);
-    } catch (error) {
-      console.error('标记掌握失败:', error);
-      throw new Error('标记掌握失败');
-    }
+    await this.client.post(`/api/wrong/${questionId}/master`);
   }
 
   async clearMasteredWrongs(): Promise<{ cleared_count: number }> {
-    try {
-      const response = await this.client.post('/api/wrong/clear-mastered');
-      return response.data.data || { cleared_count: 0 };
-    } catch (error) {
-      console.error('清空已掌握错题失败:', error);
-      throw new Error('清空已掌握错题失败');
-    }
+    const response = await this.client.post('/api/wrong/clear-mastered');
+    return response.data.data || { cleared_count: 0 };
   }
 
   async generateWrongPaper(count: number = 10): Promise<Question[]> {
-    try {
-      const response = await this.client.post('/api/wrong/paper', null, { params: { count } });
-      return response.data;
-    } catch (error) {
-      console.error('生成错题试卷失败:', error);
-      throw new Error('生成错题试卷失败');
-    }
+    const response = await this.client.post('/api/wrong/paper', null, { params: { count } });
+    return response.data;
   }
 
   async removeWrongQuestion(questionId: string): Promise<void> {
-    try {
-      await this.client.delete(`/api/wrong/${questionId}`);
-    } catch (error) {
-      console.error('移除错题失败:', error);
-      throw new Error('移除错题失败');
-    }
+    await this.client.delete(`/api/wrong/${questionId}`);
   }
 
   async getWrongStats(): Promise<any> {
-    try {
-      const response = await this.client.get('/api/wrong/stats');
-      return response.data;
-    } catch (error) {
-      console.error('获取错题统计失败:', error);
-      throw new Error('获取错题统计失败');
-    }
+    const response = await this.client.get('/api/wrong/stats');
+    return response.data;
   }
 
   async recognizeQuestion(text: string): Promise<any> {
@@ -263,94 +224,46 @@ class ApiClient {
   }
 
   async recognizeBatch(text: string): Promise<any> {
-    try {
-      const response = await this.client.post('/api/ai/recognize-batch', { text }, {
-        timeout: 180000
-      });
-      return response.data;
-    } catch (error) {
-      console.error('AI批量识别失败:', error);
-      throw error;
-    }
+    const response = await this.client.post('/api/ai/recognize-batch', { text }, { timeout: 180000 });
+    return response.data;
   }
 
-  // ===== 卷子管理 API =====
   async getPapers(): Promise<any[]> {
-    try {
-      const response = await this.client.get('/api/papers');
-      return response.data;
-    } catch (error) {
-      console.error('获取卷子列表失败:', error);
-      throw new Error('获取卷子列表失败');
-    }
+    const response = await this.client.get('/api/papers');
+    return response.data;
   }
 
   async createPaper(paper: any): Promise<{ id: string }> {
-    try {
-      const response = await this.client.post('/api/papers', paper);
-      return response.data;
-    } catch (error) {
-      console.error('创建卷子失败:', error);
-      throw new Error('创建卷子失败');
-    }
+    const response = await this.client.post('/api/papers', paper);
+    return response.data;
   }
 
   async getPaper(id: string): Promise<any> {
-    try {
-      const response = await this.client.get(`/api/papers/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('获取卷子详情失败:', error);
-      throw new Error('获取卷子详情失败');
-    }
+    const response = await this.client.get(`/api/papers/${id}`);
+    return response.data;
   }
 
   async updatePaper(id: string, data: any): Promise<void> {
-    try {
-      await this.client.put(`/api/papers/${id}`, data);
-    } catch (error) {
-      console.error('更新卷子失败:', error);
-      throw new Error('更新卷子失败');
-    }
+    await this.client.put(`/api/papers/${id}`, data);
   }
 
   async deletePaper(id: string): Promise<void> {
-    try {
-      await this.client.delete(`/api/papers/${id}`);
-    } catch (error) {
-      console.error('删除卷子失败:', error);
-      throw new Error('删除卷子失败');
-    }
+    await this.client.delete(`/api/papers/${id}`);
   }
 
   async generateQuizFromPaper(paperId: string): Promise<any[]> {
-    try {
-      const response = await this.client.post(`/api/papers/${paperId}/generate-quiz`);
-      return response.data;
-    } catch (error) {
-      console.error('从卷子生成试卷失败:', error);
-      throw new Error('从卷子生成试卷失败');
-    }
+    const response = await this.client.post(`/api/papers/${paperId}/generate-quiz`);
+    return response.data;
   }
 
   async importPaperByAI(text: string): Promise<any> {
-    try {
-      const response = await this.client.post('/api/papers/import-ai', { text }, {
-        timeout: 180000
-      });
-      return response.data;
-    } catch (error) {
-      console.error('AI导入卷子失败:', error);
-      throw new Error('AI导入卷子失败');
-    }
+    const response = await this.client.post('/api/papers/import-ai', { text }, { timeout: 180000 });
+    return response.data;
   }
 
-  // ===== 卷子对比 API =====
   async getPaperCompare(paperName: string, years?: number[]): Promise<PaperCompareData> {
     const params: any = { paper_name: paperName };
-    if (years && years.length > 0) {
-      params.years = years.join(',');
-    }
+    if (years && years.length > 0) params.years = years.join(',');
     const response = await this.client.get('/api/paper-compare', { params });
     return response.data;
   }
@@ -360,7 +273,7 @@ class ApiClient {
     return response.data.papers;
   }
 
-  async batchDeletePapers(ids: string[]): Promise<{ deleted_count: number, failed_ids: string[] }> {
+  async batchDeletePapers(ids: string[]): Promise<{ deleted_count: number; failed_ids: string[] }> {
     try {
       const response = await this.client.post('/api/papers/batch-delete', ids);
       const backendData = response.data;
@@ -368,21 +281,16 @@ class ApiClient {
         const data = backendData.data || {};
         return {
           deleted_count: data.deleted_count || ids.length,
-          failed_ids: data.failed_ids || []
+          failed_ids: data.failed_ids || [],
         };
-      } else {
-        throw new Error(backendData.message || '批量删除卷子失败');
       }
+      throw new Error(backendData.message || '批量删除卷子失败');
     } catch (error: any) {
-      console.error('批量删除卷子失败:', error);
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      }
+      if (error.response?.data?.detail) throw new Error(error.response.data.detail);
       throw new Error('批量删除卷子失败');
     }
   }
 
-  // ===== 导出卷子为 HTML（带参数） =====
   async exportPaperHTML(
     paperId: string,
     options?: {
@@ -393,25 +301,20 @@ class ApiClient {
       answer_position?: 'inline' | 'end';
     }
   ): Promise<string> {
-    try {
-      const params = new URLSearchParams();
-      if (options) {
-        if (options.show_answer !== undefined) params.append('show_answer', String(options.show_answer));
-        if (options.show_explanation !== undefined) params.append('show_explanation', String(options.show_explanation));
-        if (options.show_knowledge !== undefined) params.append('show_knowledge', String(options.show_knowledge));
-        if (options.show_score !== undefined) params.append('show_score', String(options.show_score));
-        if (options.answer_position) params.append('answer_position', options.answer_position);
-      }
-      const url = `/api/papers/${paperId}/export/html?${params.toString()}`;
-      const response = await this.client.get(url, { responseType: 'text' });
-      return response.data;
-    } catch (error) {
-      console.error('导出 HTML 失败:', error);
-      throw new Error('导出试卷失败');
+    const params = new URLSearchParams();
+    if (options) {
+      if (options.show_answer !== undefined) params.append('show_answer', String(options.show_answer));
+      if (options.show_explanation !== undefined) params.append('show_explanation', String(options.show_explanation));
+      if (options.show_knowledge !== undefined) params.append('show_knowledge', String(options.show_knowledge));
+      if (options.show_score !== undefined) params.append('show_score', String(options.show_score));
+      if (options.answer_position) params.append('answer_position', options.answer_position);
     }
+    const response = await this.client.get(`/api/papers/${paperId}/export/html?${params.toString()}`, {
+      responseType: 'text',
+    });
+    return response.data;
   }
 
-  // ===== 导出卷子为 Word =====
   async exportPaperDocx(
     paperId: string,
     options?: {
@@ -422,38 +325,29 @@ class ApiClient {
       answer_position?: 'inline' | 'end';
     }
   ): Promise<Blob> {
-    try {
-      const params = new URLSearchParams();
-      if (options) {
-        if (options.show_answer !== undefined) params.append('show_answer', String(options.show_answer));
-        if (options.show_explanation !== undefined) params.append('show_explanation', String(options.show_explanation));
-        if (options.show_knowledge !== undefined) params.append('show_knowledge', String(options.show_knowledge));
-        if (options.show_score !== undefined) params.append('show_score', String(options.show_score));
-        if (options.answer_position) params.append('answer_position', options.answer_position);
-      }
-      const url = `/api/papers/${paperId}/export/docx?${params.toString()}`;
-      const response = await this.client.get(url, {
-        responseType: 'blob'
-      });
-      return response.data;
-    } catch (error) {
-      console.error('导出 Word 失败:', error);
-      throw new Error('导出 Word 失败');
+    const params = new URLSearchParams();
+    if (options) {
+      if (options.show_answer !== undefined) params.append('show_answer', String(options.show_answer));
+      if (options.show_explanation !== undefined) params.append('show_explanation', String(options.show_explanation));
+      if (options.show_knowledge !== undefined) params.append('show_knowledge', String(options.show_knowledge));
+      if (options.show_score !== undefined) params.append('show_score', String(options.show_score));
+      if (options.answer_position) params.append('answer_position', options.answer_position);
     }
+    const response = await this.client.get(`/api/papers/${paperId}/export/docx?${params.toString()}`, {
+      responseType: 'blob',
+    });
+    return response.data;
   }
 
-  // ===== 从图片导入试卷（同步） =====
   async importPaperByImage(image: string, mimeType: string = 'image/jpeg'): Promise<any> {
     try {
-      const response = await this.client.post('/api/papers/import-image', {
-        image,
-        mime_type: mimeType,
-      }, {
-        timeout: 120000,
-      });
+      const response = await this.client.post(
+        '/api/papers/import-image',
+        { image, mime_type: mimeType },
+        { timeout: 120000 }
+      );
       return response.data;
     } catch (error: any) {
-      console.error('图片导入卷子失败:', error);
       if (error.response?.data?.detail) {
         throw new Error(
           typeof error.response.data.detail === 'string'
@@ -465,46 +359,30 @@ class ApiClient {
     }
   }
 
-  // ===== 异步导入（文本） =====
   async importPaperByAIAsync(text: string): Promise<{ task_id: string }> {
-    try {
-      const response = await this.client.post('/api/papers/import-ai-async', { text });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.detail || '启动任务失败');
-    }
+    const response = await this.client.post('/api/papers/import-ai-async', { text });
+    return response.data;
   }
 
-  // ===== 异步导入（图片，支持多页） =====
   async importPaperByImageAsync(
     images: string | string[],
     mimeType: string = 'image/jpeg'
   ): Promise<{ task_id: string; message?: string }> {
-    try {
-      const imgArr = Array.isArray(images) ? images : [images];
-      const mimeArr = Array(imgArr.length).fill(mimeType);
-
-      const response = await this.client.post(
-        '/api/papers/import-image-async',
-        {
-          images: imgArr,
-          mime_types: mimeArr,
-        },
-        { timeout: 60000 }
-      );
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.detail || '启动任务失败');
-    }
+    const imgArr = Array.isArray(images) ? images : [images];
+    const mimeArr = Array(imgArr.length).fill(mimeType);
+    const response = await this.client.post(
+      '/api/papers/import-image-async',
+      { images: imgArr, mime_types: mimeArr },
+      { timeout: 60000 }
+    );
+    return response.data;
   }
 
-  // ===== 查询任务进度 =====
   async getImportStatus(taskId: string): Promise<any> {
     const response = await this.client.get(`/api/papers/import-status/${taskId}`);
     return response.data;
   }
 
-  // ===== 学习界面 API（⭐ 新增） =====
   async getLearningCache(questionId: string): Promise<{ cached: boolean; data: any }> {
     const response = await this.client.get(`/api/learn/cache/${questionId}`);
     return response.data;

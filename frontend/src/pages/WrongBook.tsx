@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Card,
   Table,
@@ -66,6 +66,9 @@ const WrongBook: React.FC = () => {
   const [selectedQuestion, setSelectedQuestion] = useState<WrongQuestionItem | null>(null);
   const navigate = useNavigate();
 
+  // ⭐ P3 预热记录，避免重复请求
+  const warmedUpRef = useRef<Set<string>>(new Set());
+
   // 初次加载
   useEffect(() => {
     loadWrongQuestions(subjectFromUrl || undefined, undefined);
@@ -96,8 +99,25 @@ const WrongBook: React.FC = () => {
       const useSubject = subjectOverride !== undefined ? subjectOverride : filterSubject;
       if (useMastered !== undefined) params.mastered = useMastered;
       if (useSubject) params.subject = useSubject;
+      
       const data = await apiClient.getWrongQuestions(params);
       setWrongQuestions(data);
+
+      // ⭐ P3 自动预热：在后台静默生成学习材料
+      const unmastered = data.filter((q: any) => !q.mastered);
+      const idsToWarm = unmastered
+        .map((q: any) => q.question_id)
+        .filter((id: string) => !warmedUpRef.current.has(id))
+        .slice(0, 10); // 每次最多挑 10 道，防止并发过高
+
+      if (idsToWarm.length > 0) {
+        idsToWarm.forEach(id => warmedUpRef.current.add(id));
+        console.log('🔥 后台静默预热学习材料:', idsToWarm);
+        apiClient.warmupLearningBatch(idsToWarm).catch((err) => {
+          console.warn('静默预热失败（不影响使用）:', err);
+        });
+      }
+
     } catch (error) {
       message.error('加载错题本失败');
     } finally {

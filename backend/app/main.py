@@ -12,7 +12,8 @@ from app.core.ai_assistant import AIAssistant
 
 # 导入所有路由
 from app.api import questions, quiz, ai, wrong, stats, categories, auth, import_export, papers, paper_compare, learn
-
+# 顶部 import 区域，在现有 import 后加：
+from app.core.user_manager import user_manager
 # ⚠️ 设置模板目录
 templates_dir = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
@@ -22,6 +23,7 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     print(f"🚀 {settings.PROJECT_NAME} v{settings.VERSION} 正在启动...")
     await data_manager.load_data()
+    await user_manager.load()
     print(f"📊 已加载 {len(data_manager.questions)} 道题目")
     print(f"❌ 已加载 {len(data_manager.wrong_questions)} 道错题")
     print(f"🏷️  已加载 {len(data_manager.categories.get('subjects', []))} 个学科分类")
