@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 import asyncio
 import threading
@@ -8,11 +8,12 @@ from datetime import datetime
 from app.core.data_manager import data_manager
 from app.core.quiz_engine import QuizEngine
 from app.models.quiz import (
-    QuizSettings, QuizQuestion, QuizAnswer, 
+    QuizSettings, QuizQuestion, QuizAnswer,
     QuizResponse, QuizResult
 )
 from app.models.common import SuccessResponse
 from app.core.ai_assistant import AIAssistant
+from app.api.auth import get_current_user
 
 router = APIRouter()
 quiz_engine = QuizEngine()
@@ -70,7 +71,7 @@ async def generate_quiz(settings: QuizSettings):
 
 
 # 抽取核心批改逻辑
-def _do_submit(answers: List[Dict], task_id: Optional[str] = None) -> Dict[str, Any]:
+def _do_submit(answers: List[Dict], task_id: Optional[str] = None, user_id: str = "legacy") -> Dict[str, Any]:
     """批改逻辑（同步执行，可在后台线程中调用）"""
 
     def _progress(stage: str, current: int = 0, total: int = 0):
@@ -163,7 +164,13 @@ def _do_submit(answers: List[Dict], task_id: Optional[str] = None) -> Dict[str, 
         if not is_correct:
             q = next((q for q in questions_data if q['id'] == qid), None)
             if q:
-                data_manager.add_to_wrong_questions(qid, user_ans, q.get('answer', ''), save=False)
+                data_manager.add_to_wrong_questions(
+                    qid,
+                    user_ans,
+                    q.get('answer', ''),
+                    save=False,
+                    user_id=user_id,
+                )
 
         data_manager.mark_as_reviewed(qid, save=False)
 
@@ -191,14 +198,17 @@ def _do_submit(answers: List[Dict], task_id: Optional[str] = None) -> Dict[str, 
     }
 
 
-# ⭐ /submit → 放到线程池
+# ⭐ /submit → 放到线程池（需要登录）
 @router.post("/submit")
-async def submit_quiz(request: Dict[str, Any]):
+async def submit_quiz(
+    request: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     """同步批改（兼容旧版）"""
     try:
         answers = request.get("answers", [])
         # 放到线程池，避免阻塞 event loop
-        return await asyncio.to_thread(_do_submit, answers, None)
+        return await asyncio.to_thread(_do_submit, answers, None, current_user["id"])
     except HTTPException:
         raise
     except Exception as e:
@@ -209,13 +219,18 @@ async def submit_quiz(request: Dict[str, Any]):
 
 
 @router.post("/submit-async")
-async def submit_quiz_async(request: Dict[str, Any]):
+async def submit_quiz_async(
+    request: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     """异步批改，立即返回 task_id"""
     answers = request.get("answers", [])
     if not answers:
         raise HTTPException(status_code=400, detail="没有有效的答案")
 
     task_id = uuid.uuid4().hex
+    user_id = current_user["id"]
+
     _quiz_tasks[task_id] = {
         "status": "running",
         "stage": "preparing",
@@ -228,7 +243,7 @@ async def submit_quiz_async(request: Dict[str, Any]):
 
     def _run():
         try:
-            result = _do_submit(answers, task_id=task_id)
+            result = _do_submit(answers, task_id=task_id, user_id=user_id)
             _update_quiz_task(task_id, status="done", stage="done", result=result)
         except HTTPException as e:
             _update_quiz_task(task_id, status="error", error=str(e.detail))
@@ -267,9 +282,13 @@ async def quick_subject_quiz(subject: str, count: int = 10):
 
 
 @router.get("/preset/{template_type}", response_model=List[QuizQuestion])
-async def preset_template_quiz(template_type: str):
+async def preset_template_quiz(
+    template_type: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
     try:
         subjects = data_manager.categories.get('subjects', [])
+        user_id = current_user["id"]
 
         if template_type == 'daily':
             questions = quiz_engine.generate_paper(
@@ -290,7 +309,11 @@ async def preset_template_quiz(template_type: str):
                 include_wrong=True
             )
         elif template_type == 'wrong':
-            wrong_questions = [wq for wq in data_manager.wrong_questions if not wq.get('mastered', False)]
+            # ⭐ 只取当前用户的未掌握错题
+            wrong_questions = [
+                wq for wq in data_manager.wrong_questions
+                if wq.get("user_id") == user_id and not wq.get('mastered', False)
+            ]
             if not wrong_questions:
                 raise HTTPException(status_code=404, detail="暂无错题需要巩固")
             questions = [wq['question_data'] for wq in wrong_questions[:20]]
@@ -301,4 +324,4 @@ async def preset_template_quiz(template_type: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"预设模板组卷失败: {str(e)}")  
+        raise HTTPException(status_code=500, detail=f"预设模板组卷失败: {str(e)}")

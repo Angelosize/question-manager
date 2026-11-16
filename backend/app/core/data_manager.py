@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 import pandas as pd
 from .config import (
     DATA_DIR, QUESTION_DB_FILE, CATEGORIES_FILE, QUESTION_EXAMS_FILE, WRONG_QUESTIONS_FILE,
-    DEFAULT_SUBJECTS, DEFAULT_TYPES, DEFAULT_DIFFICULTIES, 
+    DEFAULT_SUBJECTS, DEFAULT_TYPES, DEFAULT_DIFFICULTIES,
     DEFAULT_SOURCES, DEFAULT_TAGS
 )
 
@@ -19,7 +19,7 @@ class DataManager:
         self.wrong_questions: List[Dict[str, Any]] = []
         self.exams: List[Dict[str, Any]] = []
         self.papers: List[Dict[str, Any]] = []
-    
+
     async def load_data(self) -> None:
         """异步加载所有数据"""
         self.questions = await self._load_questions()
@@ -29,18 +29,18 @@ class DataManager:
         # ⭐ 关键修复：清理非字典元素
         self.exams = [e for e in self.exams if isinstance(e, dict)]
         self.papers = await self._load_papers()
-    
+
     async def _load_questions(self) -> List[Dict]:
         """异步加载题目数据"""
         try:
             if QUESTION_DB_FILE.exists() and QUESTION_DB_FILE.stat().st_size > 0:
                 with open(QUESTION_DB_FILE, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    
+
                     for question in data:
                         if question.get('options') is None:
                             question['options'] = {}
-                        
+
                         question.setdefault('review_count', 0)
                         question.setdefault('last_review', '')
                         question.setdefault('status', 'active')
@@ -48,7 +48,7 @@ class DataManager:
                         question.setdefault('wrong_count', 0)
                         question.setdefault('last_wrong', '')
                         question.setdefault('tags', [])
-                    
+
                     return data
             else:
                 self._create_empty_file(QUESTION_DB_FILE, [])
@@ -57,7 +57,7 @@ class DataManager:
             print(f"加载题目数据出错: {e}")
             self._create_empty_file(QUESTION_DB_FILE, [])
             return []
-    
+
     def _load_categories(self) -> Dict[str, List[str]]:
         """加载分类数据"""
         try:
@@ -74,13 +74,16 @@ class DataManager:
         except Exception as e:
             print(f"加载分类数据出错: {e}")
             return self._create_default_categories()
-    
+
     async def _load_wrong_questions(self) -> List[Dict]:
-        """异步加载错题数据"""
+        """异步加载错题数据（兼容旧数据：无 user_id 的默认归 legacy）"""
         try:
             if WRONG_QUESTIONS_FILE.exists() and WRONG_QUESTIONS_FILE.stat().st_size > 0:
                 with open(WRONG_QUESTIONS_FILE, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    data = json.load(f)
+                for item in data:
+                    item.setdefault("user_id", "legacy")
+                return data
             else:
                 self._create_empty_file(WRONG_QUESTIONS_FILE, [])
                 return []
@@ -88,7 +91,7 @@ class DataManager:
             print(f"加载错题本数据出错: {e}")
             self._create_empty_file(WRONG_QUESTIONS_FILE, [])
             return []
-    
+
     def _create_empty_file(self, file_path: Path, default_content: Any) -> None:
         """创建空文件"""
         try:
@@ -97,7 +100,7 @@ class DataManager:
             print(f"创建空文件: {file_path.name}")
         except Exception as e:
             print(f"创建文件 {file_path.name} 失败: {e}")
-    
+
     def _create_default_categories(self) -> Dict[str, List[str]]:
         """创建默认分类"""
         categories = {
@@ -110,7 +113,7 @@ class DataManager:
         }
         self._save_categories(categories)
         return categories
-    
+
     def _ensure_default_categories(self) -> None:
         """确保分类数据有默认值"""
         required_categories = {
@@ -121,25 +124,25 @@ class DataManager:
             "tags": DEFAULT_TAGS,
             "chapters": []
         }
-        
+
         for key, default_value in required_categories.items():
             if key not in self.categories:
                 self.categories[key] = default_value
             elif not self.categories[key]:
                 self.categories[key] = default_value
-    
+
     def _save_questions_data(self, data: List[Dict]) -> bool:
         """内部保存方法"""
         try:
             os.makedirs(os.path.dirname(QUESTION_DB_FILE), exist_ok=True)
-            
+
             if not QUESTION_DB_FILE.exists():
                 with open(QUESTION_DB_FILE, 'w', encoding='utf-8') as f:
                     json.dump([], f, ensure_ascii=False, indent=2)
-            
+
             with open(QUESTION_DB_FILE, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            
+
             print(f"✅ 成功保存 {len(data)} 道题目到 {QUESTION_DB_FILE}")
             return True
         except Exception as e:
@@ -153,12 +156,12 @@ class DataManager:
         if data is None:
             data = self.questions
         return self._save_questions_data(data)
-        
+
     def _save_categories(self, categories: Optional[Dict[str, List[str]]] = None) -> bool:
         """保存分类信息"""
         if categories is None:
             categories = self.categories
-        
+
         try:
             with open(CATEGORIES_FILE, 'w', encoding='utf-8') as f:
                 json.dump(categories, f, ensure_ascii=False, indent=2)
@@ -166,7 +169,7 @@ class DataManager:
         except Exception as e:
             print(f"保存分类数据出错: {e}")
             return False
-    
+
     def save_wrong_questions(self) -> bool:
         """保存错题本数据"""
         try:
@@ -176,57 +179,57 @@ class DataManager:
         except Exception as e:
             print(f"保存错题本数据出错: {e}")
             return False
-    
+
     def update_categories(self, question: Dict[str, Any]) -> None:
         """更新分类信息"""
         if self.categories is None:
             print("⚠️ categories为None，初始化默认分类")
             self.categories = self._create_default_categories()
-        
+
         updated = False
-        
+
         if question.get('subject') and question['subject'] not in self.categories.get('subjects', []):
             self.categories.setdefault('subjects', []).append(question['subject'])
             updated = True
-        
+
         if question.get('type') and question['type'] not in self.categories.get('types', []):
             self.categories.setdefault('types', []).append(question['type'])
             updated = True
-        
+
         if question.get('chapter') and question['chapter'] not in self.categories.get('chapters', []):
             self.categories.setdefault('chapters', []).append(question['chapter'])
             updated = True
-        
+
         if question.get('tags'):
             for tag in question['tags']:
                 if tag and tag not in self.categories.get('tags', []):
                     self.categories.setdefault('tags', []).append(tag)
                     updated = True
-        
+
         if updated:
             self._save_categories()
-    
+
     def get_questions(self, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """获取题目列表，支持筛选"""
         questions = self.questions.copy()
         questions.sort(key=lambda x: x.get('created_time', ''), reverse=True)
         if not filters:
             return questions
-        
+
         print(f"应用筛选条件: {filters}")
-        
+
         if filters.get('subject'):
             questions = [q for q in questions if q.get('subject') == filters['subject']]
-        
+
         if filters.get('type'):
             questions = [q for q in questions if q.get('type') == filters['type']]
-        
+
         if filters.get('difficulty'):
             questions = [q for q in questions if q.get('difficulty') == filters['difficulty']]
-        
+
         if filters.get('tag'):
             questions = [q for q in questions if filters['tag'] in q.get('tags', [])]
-        
+
         if filters.get('keyword'):
             keyword = filters['keyword'].lower()
             filtered_questions = []
@@ -241,14 +244,14 @@ class DataManager:
                 if any(keyword in str(field).lower() for field in search_fields):
                     filtered_questions.append(q)
             questions = filtered_questions
-        
+
         if filters.get('status'):
             status_value = "active" if filters['status'] == "启用" else "inactive"
             questions = [q for q in questions if q.get('status') == status_value]
-        
+
         print("排序后前3条时间:", [q['created_time'] for q in questions[:3]])
         return questions
-    
+
     def add_question(self, question_data: Dict[str, Any], save: bool = True) -> str:
         """
         添加新题目
@@ -312,7 +315,7 @@ class DataManager:
                 raise Exception("保存题目数据失败")
 
         return question_id
-    
+
     def update_question(self, question_id: str, question_data: Dict[str, Any]) -> bool:
         """更新题目"""
         for i, q in enumerate(self.questions):
@@ -320,7 +323,7 @@ class DataManager:
                 update_data = question_data.copy()
                 if 'options' in update_data and update_data['options'] is None:
                     update_data['options'] = {}
-                
+
                 updated_question = {
                     **q,
                     **update_data,
@@ -331,34 +334,34 @@ class DataManager:
                 self.save_questions()
                 return True
         return False
-    
+
     def delete_question(self, question_id: str) -> bool:
         """删除题目（不检查依赖，仅删除）"""
         print(f"🗑️ 尝试删除题目: {question_id}")
         print(f"📊 删除前题目数量: {len(self.questions)}")
         print(f"📋 所有题目ID: {[q['id'] for q in self.questions]}")
-        
+
         original_length = len(self.questions)
         self.questions = [q for q in self.questions if q['id'] != question_id]
-        
+
         print(f"📊 删除后题目数量: {len(self.questions)}")
         deleted = len(self.questions) < original_length
         print(f"✅ 删除结果: {deleted}")
-        
+
         if deleted:
             return self._save_questions_data(self.questions)
-        
+
         print(f"❌ 未找到题目: {question_id}")
         return False
-    
+
     def get_delete_conflicts(self, question_id: str) -> Dict[str, Any]:
-        """检查删除题目时可能存在的依赖冲突"""
+        """检查删除题目时可能存在的依赖冲突（错题本检查所有用户）"""
         conflicts = {
             "has_conflict": False,
             "papers": [],
             "in_wrong_book": False
         }
-        
+
         referencing_papers = []
         for paper in self.papers:
             for q in paper.get("questions", []):
@@ -369,32 +372,31 @@ class DataManager:
                     })
                     break
         conflicts["papers"] = referencing_papers
-        
+
         in_wrong = any(wq.get("question_id") == question_id for wq in self.wrong_questions)
         conflicts["in_wrong_book"] = in_wrong
-        
+
         conflicts["has_conflict"] = bool(referencing_papers) or in_wrong
         return conflicts
-    
+
     def batch_check_conflicts(self, question_ids: List[str]) -> Dict[str, Dict]:
         """批量检查冲突"""
         result = {}
         for qid in question_ids:
             result[qid] = self.get_delete_conflicts(qid)
         return result
-    
+
     def batch_delete_questions(self, question_ids: List[str]) -> int:
         """批量删除题目（不检查依赖）"""
         original_length = len(self.questions)
         self.questions = [q for q in self.questions if q['id'] not in question_ids]
-        
+
         deleted_count = original_length - len(self.questions)
         if deleted_count > 0:
             self.save_questions()
-        
+
         return deleted_count
-    
-    # ⭐ 修改：增加 save 参数，支持批量保存
+
     def mark_as_reviewed(self, question_id: str, save: bool = True) -> bool:
         """标记为已复习（save=False 时只更新内存）"""
         for i, q in enumerate(self.questions):
@@ -405,47 +407,58 @@ class DataManager:
                     self.save_questions()
                 return True
         return False
-    
-    # ⭐ 修改：增加 save 参数，支持批量保存
-    def add_to_wrong_questions(self, question_id: str, user_answer: str, correct_answer: str, save: bool = True) -> bool:
-        """添加到错题本（save=False 时只更新内存，稍后统一保存）"""
+
+    def add_to_wrong_questions(
+        self,
+        question_id: str,
+        user_answer: str,
+        correct_answer: str,
+        save: bool = True,
+        user_id: str = "legacy",
+    ) -> bool:
+        """添加到错题本（按 user_id + question_id 唯一）"""
         try:
-            existing_wrong = next((w for w in self.wrong_questions 
-                                 if w['question_id'] == question_id), None)
-            
+            existing_wrong = next(
+                (w for w in self.wrong_questions
+                 if w.get("user_id") == user_id and w["question_id"] == question_id),
+                None,
+            )
+
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
             if existing_wrong:
-                existing_wrong['wrong_count'] += 1
-                existing_wrong['last_wrong'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                existing_wrong['user_answers'].append({
-                    'answer': user_answer,
-                    'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                existing_wrong["wrong_count"] += 1
+                existing_wrong["last_wrong"] = now
+                existing_wrong.setdefault("user_answers", []).append({
+                    "answer": user_answer,
+                    "time": now,
                 })
             else:
                 question = next((q for q in self.questions if q['id'] == question_id), None)
                 if question:
-                    wrong_question = {
-                        'question_id': question_id,
-                        'question_data': question,
-                        'user_answers': [{
-                            'answer': user_answer,
-                            'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    self.wrong_questions.append({
+                        "user_id": user_id,
+                        "question_id": question_id,
+                        "question_data": question,
+                        "user_answers": [{
+                            "answer": user_answer,
+                            "time": now,
                         }],
-                        'correct_answer': correct_answer,
-                        'wrong_count': 1,
-                        'first_wrong': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'last_wrong': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'mastered': False,
-                        'review_count': 0
-                    }
-                    self.wrong_questions.append(wrong_question)
-            
-            # 更新题目的错题统计
+                        "correct_answer": correct_answer,
+                        "wrong_count": 1,
+                        "first_wrong": now,
+                        "last_wrong": now,
+                        "mastered": False,
+                        "review_count": 0,
+                    })
+
+            # 题目级别的全局统计（作为难度参考）
             for q in self.questions:
                 if q['id'] == question_id:
                     q['wrong_count'] = q.get('wrong_count', 0) + 1
-                    q['last_wrong'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    q['last_wrong'] = now
                     break
-            
+
             if save:
                 self.save_wrong_questions()
                 self.save_questions()
@@ -453,44 +466,44 @@ class DataManager:
         except Exception as e:
             print(f"添加错题时出错: {e}")
             return False
-    
-    def remove_from_wrong_questions(self, question_id: str) -> None:
-        """从错题本移除"""
+
+    def remove_from_wrong_questions(self, question_id: str, user_id: str = "legacy") -> None:
+        """从指定用户的错题本移除"""
         self.wrong_questions = [
-            w for w in self.wrong_questions 
-            if w['question_id'] != question_id
+            w for w in self.wrong_questions
+            if not (w.get("user_id") == user_id and w['question_id'] == question_id)
         ]
         self.save_wrong_questions()
-    
-    def mark_wrong_question_mastered(self, question_id: str) -> bool:
-        """标记错题为已掌握"""
+
+    def mark_wrong_question_mastered(self, question_id: str, user_id: str = "legacy") -> bool:
+        """标记指定用户的错题为已掌握"""
         for wrong_question in self.wrong_questions:
-            if wrong_question['question_id'] == question_id:
+            if wrong_question.get("user_id") == user_id and wrong_question['question_id'] == question_id:
                 wrong_question['mastered'] = True
                 wrong_question['review_count'] = wrong_question.get('review_count', 0) + 1
                 self.save_wrong_questions()
                 return True
         return False
-    
-    def clear_mastered_wrong_questions(self) -> int:
-        """清空已掌握的错题"""
+
+    def clear_mastered_wrong_questions(self, user_id: str = "legacy") -> int:
+        """清空指定用户已掌握的错题"""
         original_length = len(self.wrong_questions)
         self.wrong_questions = [
-            wq for wq in self.wrong_questions 
-            if not wq.get('mastered', False)
+            wq for wq in self.wrong_questions
+            if not (wq.get("user_id") == user_id and wq.get('mastered', False))
         ]
         cleared_count = original_length - len(self.wrong_questions)
         if cleared_count > 0:
             self.save_wrong_questions()
         return cleared_count
-    
+
     def import_from_text_content(self, content: str) -> int:
         """从文本内容导入题目"""
         try:
             lines = content.split('\n')
             current_question = {}
             questions_added = 0
-            
+
             for line in lines:
                 line = line.strip()
                 if not line:
@@ -499,23 +512,23 @@ class DataManager:
                         questions_added += 1
                         current_question = {}
                     continue
-                
+
                 if line.startswith('[') and ']' in line:
                     if current_question and current_question.get('content'):
                         self._process_imported_question(current_question)
                         questions_added += 1
-                    
+
                     parts = line[1:].split(']', 1)
                     subject = parts[0].strip()
                     remaining = parts[1].strip() if len(parts) > 1 else ""
-                    
+
                     question_type = "综合题"
                     for q_type in ["选择题", "填空题", "解答题", "判断题", "简答题"]:
                         if q_type in remaining:
                             question_type = q_type
                             remaining = remaining.replace(q_type, "").strip()
                             break
-                    
+
                     current_question = {
                         "subject": subject,
                         "type": question_type,
@@ -566,23 +579,23 @@ class DataManager:
                             current_question['content'] += '\n' + line
                         else:
                             current_question['content'] = line
-            
+
             if current_question and current_question.get('content'):
                 self._process_imported_question(current_question)
                 questions_added += 1
-            
+
             self.save_questions()
             return questions_added
-            
+
         except Exception as e:
             print(f"导入文本内容时出错: {e}")
             return 0
-    
+
     def _process_imported_question(self, question_data: Dict[str, Any]) -> None:
         """处理导入的题目数据"""
         try:
             question_id = f"Q{uuid.uuid4().hex[:8].upper()}"
-            
+
             question = {
                 "id": question_id,
                 "subject": question_data.get('subject', '通用'),
@@ -605,40 +618,40 @@ class DataManager:
                 "wrong_count": 0,
                 "last_wrong": ""
             }
-            
+
             if not question['content']:
                 print(f"跳过题目 {question_id}: 题干内容为空")
                 return
-                
+
             if not question['answer']:
                 print(f"跳过题目 {question_id}: 答案为空")
                 return
-            
+
             self.questions.append(question)
             self.update_categories(question)
-            
+
         except Exception as e:
             print(f"处理导入题目时出错: {e}")
-    
+
     def import_from_dataframe(self, df: pd.DataFrame) -> int:
         """从DataFrame导入题目"""
         try:
             questions_added = 0
-            
+
             for _, row in df.iterrows():
                 try:
                     question_id = f"Q{uuid.uuid4().hex[:8].upper()}"
-                    
+
                     options = {}
                     for col in ['选项A', '选项B', '选项C', '选项D', '选项E', '选项F']:
                         if col in row and pd.notna(row[col]):
                             letter = col.replace('选项', '')
                             options[letter] = str(row[col])
-                    
+
                     tags = []
                     if '标签' in row and pd.notna(row['标签']):
                         tags = [tag.strip() for tag in str(row['标签']).split(',')]
-                    
+
                     question = {
                         "id": question_id,
                         "subject": str(row.get('学科', '通用')).strip(),
@@ -661,35 +674,35 @@ class DataManager:
                         "wrong_count": 0,
                         "last_wrong": ""
                     }
-                    
+
                     if question['content'] and question['answer']:
                         self.questions.append(question)
                         self.update_categories(question)
                         questions_added += 1
                     else:
                         print(f"跳过题目 {question_id}: 题干或答案为空")
-                        
+
                 except Exception as e:
                     print(f"处理行时出错: {e}")
                     continue
-            
+
             if questions_added > 0:
                 self.save_questions()
-            
+
             return questions_added
-            
+
         except Exception as e:
             print(f"导入Excel数据时出错: {e}")
             return 0
-    
+
     async def load_wrong_questions(self) -> List[Dict]:
         """公共方法：加载错题数据"""
         return await self._load_wrong_questions()
-    
+
     async def load_questions(self) -> List[Dict]:
         """公共方法：加载题目数据"""
         return await self._load_questions()
-    
+
     async def _load_exams(self) -> List[Dict[str, Any]]:
         """加载考试归属信息，返回扁平字典列表"""
         try:
@@ -718,7 +731,7 @@ class DataManager:
             print(f"加载考试归属数据出错: {e}")
             self._create_empty_file(QUESTION_EXAMS_FILE, {"mappings": []})
             return []
-    
+
     def _save_exams_data(self, data: List[Dict]) -> bool:
         """保存考试归属数据（内部）"""
         try:
@@ -734,7 +747,7 @@ class DataManager:
     def save_exams(self) -> bool:
         """保存考试归属数据（外部调用）"""
         return self._save_exams_data(self.exams)
-    
+
     def get_exam_by_question_id(self, question_id: str) -> Optional[Dict[str, Any]]:
         """根据题目ID查询考试归属信息"""
         for exam in self.exams:
@@ -764,7 +777,7 @@ class DataManager:
                 exam.update(update_data)
                 return self.save_exams()
         return False
-    
+
     async def _load_papers(self) -> List[Dict]:
         try:
             papers_file = DATA_DIR / "papers.json"
